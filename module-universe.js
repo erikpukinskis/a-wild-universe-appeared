@@ -59,11 +59,16 @@ module.exports = library.export(
      
 
       function done() {
-        universe.baseLog = source
+        if (source[0] == "<") {
+          message = source.match(/<Message>(.*)<\/Message>/)[1]
+          console.log("Nothing in "+universe.name+" yet. Amazon says "+message)
+        } else {
+          universe.baseLog = source
+          universe.play()
+        }
         universe.waitingForReady.forEach(call)
         universe.waitingForReady = []
         universe.waiting = false
-        universe.play()
         callback()
       }
 

@@ -1,7 +1,7 @@
 {
   "name": "module-universe",
   "version": "0.0.0",
-  "description": "Save function calls for later",
+  "description": "Build up a log of function calls for replaying later",
   "main": "module-universe.js",
   "dependencies": {
     "nrtv-library": "*",
