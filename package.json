@@ -1,6 +1,6 @@
 {
   "name": "tell-the-universe",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Build up a log of function calls for replaying later",
   "main": "module-universe.js",
   "dependencies": {
