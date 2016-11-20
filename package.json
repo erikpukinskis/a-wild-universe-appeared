@@ -1,5 +1,5 @@
 {
-  "name": "module-universe",
+  "name": "tell-the-universe",
   "version": "0.1.0",
   "description": "Build up a log of function calls for replaying later",
   "main": "module-universe.js",
@@ -13,6 +13,6 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/erikpukinskis/module-universe.git"
+    "url": "https://github.com/erikpukinskis/tell-the-universe.git"
   }
 }
