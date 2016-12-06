@@ -37,6 +37,8 @@ module.exports = library.export(
       tellIt.persistToS3 = persistToS3.bind(universe)
       tellIt.loadFromS3 = loadFromS3.bind(universe)
       tellIt.playItBack = playItBack.bind(universe)
+      tellIt.onLibrary = onLibrary.bind(universe)
+      tellIt.isReady = isReady.bind(universe)
 
       return tellIt
     }
@@ -69,6 +71,12 @@ module.exports = library.export(
       return bindTo(universe)
     }
 
+    function onLibrary(library) {
+      var universe = universeFor(this)
+      universe.library = library
+      return bindTo(universe)
+    }
+
     function withNames(pathsByName) {
       var universe = universeFor(this)
 
@@ -94,7 +102,10 @@ module.exports = library.export(
       universe.s3 = knox.createClient(options)
     }
 
-    ModuleUniverse.prototype.isReady = function() { return !this.waiting }
+    function isReady() {
+      var universe = universeFor(this)
+      return !universe.waiting
+    }
 
     function loadFromS3(callback) {
       var universe = universeFor(this)

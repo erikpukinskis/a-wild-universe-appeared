@@ -6,9 +6,12 @@ runTest(
   ["./", "./add"],
   function(expect, done, tellTheUniverse, add) {
 
-    tellTheUniverse = tellTheUniverse.called("test").withNames({
-      add: "./add"
-    })
+    tellTheUniverse = tellTheUniverse
+      .called("test")
+      .withNames({
+        add: "./add"
+      })
+      .onLibrary(runTest.library)
 
     var testS3 = !!process.env.AWS_ACCESS_KEY_ID
 
@@ -29,6 +32,7 @@ runTest(
     if (testS3) {
       tellTheUniverse.loadFromS3(
         function ready(){
+          expect(tellTheUniverse.isReady()).to.be.true
           done.ish("load from S3")
           done()
         }
