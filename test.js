@@ -1,36 +1,40 @@
-var test = require("nrtv-test")(require)
+var runTest = require("run-test")(require)
 
-test.using(
+runTest(
   "can play events back",
 
   ["./", "./add"],
-  function(expect, done, Universe, add) {
+  function(expect, done, tellTheUniverse, add) {
 
-    var universe = new Universe(
-      "test",
-      ["./add"],
-      function(add) {
-        // begin
-      }
-    )
+    tellTheUniverse = tellTheUniverse.called("test").withNames({
+      add: "./add"
+    })
 
-    // universe.persistToS3({
-    //   key: process.env.AWS_ACCESS_KEY_ID,
-    //   secret: process.env.AWS_SECRET_ACCESS_KEY,
-    //   bucket: "ezjs"
-    // })
+    var testS3 = !!process.env.AWS_ACCESS_KEY_ID
 
-    // universe.loadFromS3(
-    //   function ready(){
-    //   }
-    // )
+    if (testS3) {
+      tellTheUniverse.persistToS3({
+        key: process.env.AWS_ACCESS_KEY_ID,
+        secret: process.env.AWS_SECRET_ACCESS_KEY,
+        bucket: "ezjs"
+      })
+    }
 
-    universe.do("add", 1)
-    universe.do("add", 4)
+    tellTheUniverse("add", 1)
+    tellTheUniverse("add", 4)
 
-    universe.play()
-
+    tellTheUniverse.playItBack()
     expect(add.total).to.equal(5)
-    done()
+
+    if (testS3) {
+      tellTheUniverse.loadFromS3(
+        function ready(){
+          done.ish("load from S3")
+          done()
+        }
+      )
+    } else {
+      done()
+    }
   }
 )

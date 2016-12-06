@@ -4,12 +4,16 @@
   "description": "Build up a log of function calls for replaying later",
   "main": "module-universe.js",
   "dependencies": {
-    "nrtv-library": "*",
-    "nrtv-test": "*",
+    "module-library": "*",
     "knox": "*"
   },
+  "devDependencies": {
+    "run-test": "*"
+  },    
   "scripts": {
-    "test": "node test.js"
+    "test": "node test.js",
+    "s3-test": "env $(cat CREDENTIALS | xargs) node test",
+    "s3-debug": "env $(cat CREDENTIALS | xargs) node debug test"
   },
   "repository": {
     "type": "git",

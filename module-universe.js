@@ -1,9 +1,45 @@
-var library = require("nrtv-library")(require)
+var library = require("module-library")(require)
 
 module.exports = library.export(
   "module-universe",
   ["knox"],
   function(knox) {
+
+    var globalUniverse
+
+    function universeFor(reference) {
+      if (reference.DTRACE_NET_SERVER_CONNECTION) {
+        throw new Error("bound universe function to global scope")
+      }
+      if (reference.universe == 1) {
+        var universe = globalUniverse || newGlobalUniverse()
+      } else {
+        var universe = reference
+      }
+
+      return universe
+    }
+
+    function newGlobalUniverse() {
+      globalUniverse = new ModuleUniverse()
+      return globalUniverse
+    }
+
+    function tellTheUniverse() {
+      var universe = universeFor(this)
+      universe.do.apply(universe, arguments)
+    }
+
+    function bindTo(universe) {
+      var tellIt = tellTheUniverse.bind(universe)
+      tellIt.withNames = withNames.bind(universe)
+      tellIt.called = callIt.bind(universe)
+      tellIt.persistToS3 = persistToS3.bind(universe)
+      tellIt.loadFromS3 = loadFromS3.bind(universe)
+      tellIt.playItBack = playItBack.bind(universe)
+
+      return tellIt
+    }
 
     function ModuleUniverse() {
       for(var i=0; i<arguments.length; i++) {
@@ -16,7 +52,7 @@ module.exports = library.export(
         } else if (arg.constructor.name == "Library") {
           this.library = arg
         } else if (Array.isArray(arg)) {
-          this.moduleNames = arg
+          this.modulePaths = arg
         } else {
           throw new Error("Don't know what to do with ModuleUniverse arg "+arg)
         }
@@ -27,25 +63,52 @@ module.exports = library.export(
       this.waiting = false
     }
 
-    ModuleUniverse.prototype.persistToS3 = function(options) {
-      this.s3 = knox.createClient(options)
+    function callIt(name) {
+      var universe = universeFor(this)
+      universe.name = name
+      return bindTo(universe)
+    }
+
+    function withNames(pathsByName) {
+      var universe = universeFor(this)
+
+      var paths = []
+      var names = []
+
+      for(var name in pathsByName) {
+        var modulePath = pathsByName[name]
+        paths.push(modulePath)
+        names.push(name)
+      }
+
+      var logScript = "(function("+names.join(", ")+") {\n  // begin\n})"
+
+      var baseLog = eval(logScript)
+      universe.baseLog = baseLog
+      universe.modulePaths = paths
+      return bindTo(universe)
+    }
+
+    function persistToS3(options) {
+      var universe = universeFor(this)
+      universe.s3 = knox.createClient(options)
     }
 
     ModuleUniverse.prototype.isReady = function() { return !this.waiting }
 
-    ModuleUniverse.prototype.loadFromS3 = function(callback) {
-      if (!this.s3) {
+    function loadFromS3(callback) {
+      var universe = universeFor(this)
+
+      if (!universe.s3) {
         console.log("WARNING: No AWS credentials, no persistence. We are dust in the wind.")
         return
       }
 
-      this.waiting = true
+      universe.waiting = true
 
-      var universe = this
       var source = ""
 
-      console.log("path", this.path())
-      this.s3.get(this.path()).on('response',
+      universe.s3.get(universe.path()).on('response',
         function(res){
           res.setEncoding('utf8')
           res.on('data', append)
@@ -64,7 +127,7 @@ module.exports = library.export(
           console.log("Nothing in "+universe.name+" yet. Amazon says "+message)
         } else {
           universe.baseLog = source
-          universe.play()
+          playItBack.call(universe)
         }
         universe.waitingForReady.forEach(call)
         universe.waitingForReady = []
@@ -84,13 +147,21 @@ module.exports = library.export(
         }
       }
 
-    ModuleUniverse.prototype.play
-      = function() {
-        (this.library || library).using(
-          this.moduleNames,
-          eval("("+this.source()+")")
-        )
+    function playItBack() {
+      var universe = universeFor(this)
+
+      if (!universe.modulePaths) {
+        debugger
       }
+
+      if (!universe.source) {
+        debugger
+      }
+      ;(universe.library || library).using(
+        universe.modulePaths,
+        eval("("+universe.source()+")")
+      )
+    }
 
     ModuleUniverse.prototype.do =
       function(call) {
@@ -153,6 +224,6 @@ module.exports = library.export(
 
     }
 
-    return ModuleUniverse
+    return bindTo({universe: 1})
   }
 )
