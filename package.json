@@ -1,6 +1,6 @@
 {
   "name": "tell-the-universe",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Build up a log of function calls for replaying later",
   "main": "module-universe.js",
   "dependencies": {
@@ -9,7 +9,7 @@
   },
   "devDependencies": {
     "run-test": "*"
-  },    
+  },
   "scripts": {
     "test": "node test.js",
     "s3-test": "env $(cat CREDENTIALS | xargs) node test",
