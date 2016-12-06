@@ -1,7 +1,7 @@
 var library = require("module-library")(require)
 
 module.exports = library.export(
-  "module-universe",
+  "tell-the-universe",
   ["knox"],
   function(knox) {
 
@@ -71,9 +71,12 @@ module.exports = library.export(
       return bindTo(universe)
     }
 
-    function onLibrary(library) {
+    function onLibrary(lib) {
+      if (!lib) {
+        throw new Error()
+      }
       var universe = universeFor(this)
-      universe.library = library
+      universe.library = lib
       return bindTo(universe)
     }
 
