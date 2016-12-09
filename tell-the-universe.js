@@ -62,7 +62,9 @@ module.exports = library.export(
 
       this.log = []
       this.waitingForReady = []
-      this.waiting = false
+      this.isWaiting = false
+      this.isSaving = false
+      this.isDirty = false
     }
 
     function callIt(name) {
@@ -107,7 +109,7 @@ module.exports = library.export(
 
     function isReady() {
       var universe = universeFor(this)
-      return !universe.waiting
+      return !universe.isWaiting
     }
 
     function loadFromS3(callback) {
@@ -118,7 +120,7 @@ module.exports = library.export(
         return
       }
 
-      universe.waiting = true
+      universe.isWaiting = true
 
       var source = ""
 
@@ -141,11 +143,12 @@ module.exports = library.export(
           console.log("Nothing in "+universe.name+" yet. Amazon says "+message)
         } else {
           universe.baseLog = source
+          console.log("\n===\nREPLAYED LOG\n"+source+"\n===\n")
           playItBack.call(universe)
         }
         universe.waitingForReady.forEach(call)
         universe.waitingForReady = []
-        universe.waiting = false
+        universe.isWaiting = false
         callback()
       }
 
@@ -154,7 +157,7 @@ module.exports = library.export(
 
     ModuleUniverse.prototype.onReady =
       function(callback) {
-        if (!this.waiting) {
+        if (!this.isWaiting) {
           callback()
         } else {
           this.waitingForReady.push(callback)
@@ -164,13 +167,6 @@ module.exports = library.export(
     function playItBack() {
       var universe = universeFor(this)
 
-      if (!universe.modulePaths) {
-        debugger
-      }
-
-      if (!universe.source) {
-        debugger
-      }
       ;(universe.library || library).using(
         universe.modulePaths,
         eval("("+universe.source()+")")
@@ -213,10 +209,32 @@ module.exports = library.export(
       }
 
     ModuleUniverse.prototype.persist = function() {
+      if (this.isSaving) {
+        this.isDirty = true
+        return
+      }
 
+      if (this.lastSave) {
+        var sinceLastSave = new Date() - this.lastSave
+        var timeToWait = 10000 - sinceLastSave
+      } else {
+        var timeToWait = 1000
+      }
+
+      this.isSaving = true
+
+      setTimeout(
+        persistNow.bind(this),
+        timeToWait)
+    }
+
+    function persistNow() {
       var log = new Buffer(
         this.source()
       )
+
+      this.isDirty = false
+      this.lastSave = new Date()
 
       console.log("\n===\nNEW LOG\n===\n"+this.source())
 
@@ -226,16 +244,19 @@ module.exports = library.export(
         log,
         this.path(),
         {"Content-Type": "text/plain"},
-        handleResponse
+        handleResponse.bind(this)
       )
+    }
 
-      function handleResponse(error, response) {
-        if (error) {
-          throw new Error(error)
-        }
-        response.pipe(process.stdout)
+    function handleResponse(error, response) {
+      if (error) {
+        throw new Error(error)
       }
-
+      this.isSaving = false
+      if (this.isDirty) {
+        this.persist()
+      }
+      response.pipe(process.stdout)
     }
 
     return bindTo({universe: 1})
