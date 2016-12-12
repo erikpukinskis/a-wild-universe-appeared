@@ -39,9 +39,11 @@ module.exports = library.export(
       tellIt.playItBack = playItBack.bind(universe)
       tellIt.onLibrary = onLibrary.bind(universe)
       tellIt.isReady = isReady.bind(universe)
+      tellIt.load = load.bind(universe)
 
       return tellIt
     }
+
 
     function ModuleUniverse() {
       for(var i=0; i<arguments.length; i++) {
@@ -102,6 +104,8 @@ module.exports = library.export(
       return bindTo(universe)
     }
 
+    ModuleUniverse.prototype.persistToS3 = persistToS3
+
     function persistToS3(options) {
       var universe = universeFor(this)
       universe.s3 = knox.createClient(options)
@@ -111,6 +115,24 @@ module.exports = library.export(
       var universe = universeFor(this)
       return !universe.isWaiting
     }
+
+    function load(callback) {
+      var universe = universeFor(this)
+
+      if (process.env.AWS_ACCESS_KEY_ID) {
+        universe.persistToS3({
+          key: process.env.AWS_ACCESS_KEY_ID,
+          secret: process.env.AWS_SECRET_ACCESS_KEY,
+          bucket: "ezjs"
+        })
+
+        universe.loadFromS3(callback)
+      } else {
+        console.log("I have no Amazon credentials. There is nothing to load in the universe.")
+      }
+    }
+
+    ModuleUniverse.prototype.loadFromS3 = loadFromS3
 
     function loadFromS3(callback) {
       var universe = universeFor(this)
@@ -149,7 +171,7 @@ module.exports = library.export(
         universe.waitingForReady.forEach(call)
         universe.waitingForReady = []
         universe.isWaiting = false
-        callback()
+        callback && callback()
       }
 
       function call(fn) { fn() }
