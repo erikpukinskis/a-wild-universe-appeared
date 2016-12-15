@@ -69,8 +69,16 @@ module.exports = library.export(
       this.isDirty = false
     }
 
+    var universesByName = {}
+
     function callIt(name) {
-      var universe = universeFor(this)
+      var named = universesByName[name]
+
+      if (named) {
+        return bindTo(named)
+      }
+      
+      var universe = universesByName[name] = new ModuleUniverse()
       universe.name = name
       return bindTo(universe)
     }
@@ -86,6 +94,11 @@ module.exports = library.export(
 
     function withNames(pathsByName) {
       var universe = universeFor(this)
+      var signature = JSON.stringify(pathsByName)
+
+      if (universe.signature && signature != universe.signature) {
+        throw new Error("Trying to use names "+signature+" on universe "+universe.name+" but it was already using names "+universe.signature)
+      }
 
       var paths = []
       var names = []
@@ -101,6 +114,8 @@ module.exports = library.export(
       var baseLog = eval(logScript)
       universe.baseLog = baseLog
       universe.modulePaths = paths
+      universe.signature = signature
+
       return bindTo(universe)
     }
 
