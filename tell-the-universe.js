@@ -215,9 +215,36 @@ module.exports = library.export(
         var args = Array.prototype.slice.call(arguments, 1)
         var paramString = args.map(JSON.stringify).join(", ")
         var line = call+"("+paramString+")"
+        test(call, line)
         this.log.push(line)
         this.persist()
       }
+
+    function noop() {}
+
+    function test(call, line) {
+      var parts = call.split(".")
+      var method = parts[1]
+      var argName = parts[0]
+
+      if (method) {
+        var singleton = {}
+        singleton[method] = noop
+      } else {
+        var singleton = noop
+      }
+
+      var source = "(function("+argName+") { "+line+" })"
+
+      try {
+        var func = eval(source)
+
+        func.call(null, singleton)
+      } catch(e) {
+        console.log("Log sanity check failed! We tried testing source:\n"+source)
+        throw e
+      }
+    }
 
     ModuleUniverse.prototype.source =
       function() {
