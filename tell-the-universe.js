@@ -213,12 +213,22 @@ module.exports = library.export(
     ModuleUniverse.prototype.do =
       function(call) {
         var args = Array.prototype.slice.call(arguments, 1)
-        var paramString = args.map(JSON.stringify).join(", ")
+        var paramString = args.map(toString).join(", ")
         var line = call+"("+paramString+")"
         test(call, line)
         this.log.push(line)
         this.persist()
       }
+
+    function toString(arg) {
+      if (typeof arg == "undefined") {
+        return "undefined"
+      } else if (typeof arg == "function") {
+        return arg.toString()
+      } else {
+        return JSON.stringify(arg)
+      }
+    }
 
     function noop() {}
 

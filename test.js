@@ -42,3 +42,23 @@ runTest(
     }
   }
 )
+
+runTest(
+  "undefined args",
+  ["./"],
+  function(expect, done, tellTheUniverse) {
+
+
+    tellTheUniverse = tellTheUniverse
+      .called("test")
+      .withNames({
+        add: "./add"
+      })
+
+    tellTheUniverse("add", "foo", undefined)
+
+    tellTheUniverse.playItBack()
+
+    done()
+  }
+)
