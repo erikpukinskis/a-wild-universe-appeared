@@ -6,6 +6,7 @@ module.exports = library.export(
   function(knox) {
 
     var globalUniverse
+    var isOffline = true
 
     function universeFor(reference) {
       if (reference.DTRACE_NET_SERVER_CONNECTION) {
@@ -135,6 +136,8 @@ module.exports = library.export(
       var universe = universeFor(this)
 
       if (process.env.AWS_ACCESS_KEY_ID) {
+        isOffline = false
+
         universe.persistToS3({
           key: process.env.AWS_ACCESS_KEY_ID,
           secret: process.env.AWS_SECRET_ACCESS_KEY,
@@ -283,6 +286,7 @@ module.exports = library.export(
       }
 
     ModuleUniverse.prototype.persist = function() {
+
       if (this.isSaving) {
         this.isDirty = true
         return
@@ -312,14 +316,16 @@ module.exports = library.export(
 
       console.log("\n===\nNEW LOG\n===\n"+this.source())
 
-      if (!this.s3) { return }
-
-      this.s3.putBuffer(
-        log,
-        this.path(),
-        {"Content-Type": "text/plain"},
-        handleResponse.bind(this)
-      )
+      if (isOffline) {
+        handleResponse.call(this)
+      } else {
+        this.s3.putBuffer(
+          log,
+          this.path(),
+          {"Content-Type": "text/plain"},
+          handleResponse.bind(this)
+        )
+      }
     }
 
     function handleResponse(error, response) {
@@ -330,7 +336,9 @@ module.exports = library.export(
       if (this.isDirty) {
         this.persist()
       }
-      response.pipe(process.stdout)
+      if (response) {
+        response.pipe(process.stdout)
+      }
     }
 
     return bindTo({universe: 1})
