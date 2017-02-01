@@ -41,6 +41,7 @@ module.exports = library.export(
       tellIt.onLibrary = onLibrary.bind(universe)
       tellIt.isReady = isReady.bind(universe)
       tellIt.load = load.bind(universe)
+      tellIt.onAllReady = onAllReady
 
       return tellIt
     }
@@ -152,6 +153,16 @@ module.exports = library.export(
 
     ModuleUniverse.prototype.loadFromS3 = loadFromS3
 
+    var waitingForAll = []
+    var loadingCount = 0
+    function onAllReady(callback) {
+      if (loadingCount == 0) {
+        callback()
+      } else {
+        waitingForAll.push(callback)
+      }
+    }
+
     function loadFromS3(callback) {
       var universe = universeFor(this)
 
@@ -164,6 +175,7 @@ module.exports = library.export(
 
       var source = ""
 
+      loadingCount++
       universe.s3.get(universe.path()).on('response',
         function(res){
           res.setEncoding('utf8')
@@ -178,6 +190,7 @@ module.exports = library.export(
      
 
       function done() {
+        loadingCount--
         if (source[0] == "<") {
           message = source.match(/<Message>(.*)<\/Message>/)[1]
           console.log("Nothing in "+universe.name+" yet. Amazon says "+message)
@@ -190,6 +203,10 @@ module.exports = library.export(
         universe.waitingForReady = []
         universe.isWaiting = false
         callback && callback()
+        if (loadingCount == 0) {
+          waitingForAll.map(call)
+          waitingForAll = []
+        }
       }
 
       function call(fn) { fn() }
