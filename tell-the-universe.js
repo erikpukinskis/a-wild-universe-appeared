@@ -28,6 +28,14 @@ module.exports = library.export(
 
     function tellTheUniverse() {
       var universe = universeFor(this)
+
+      if (!universe.baseLog) {
+        var name = universe.name
+        name = name && name+" " || ""
+
+        throw new Error("Can't tell the universe "+name+"anything if it doesn't know what words you speak with! Try tellTheUniverse = tellTheUniverse.called(\"whatever\").withNames({someName: \"path-to-some-module\"})")
+      }
+
       universe.do.apply(universe, arguments)
     }
 
