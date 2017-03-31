@@ -204,7 +204,6 @@ module.exports = library.export(
           console.log("Nothing in "+universe.name+" yet. Amazon says "+message)
         } else {
           universe.baseLog = source
-          console.log("\n===\nREPLAYED LOG\n"+source+"\n===\n")
           playItBack.call(universe)
         }
         universe.waitingForReady.forEach(call)
@@ -236,6 +235,8 @@ module.exports = library.export(
         universe.modulePaths,
         eval("("+universe.source()+")")
       )
+
+      console.log("\n===\nREPLAYED LOG\n"+universe.source()+"\n===\n")
     }
 
     ModuleUniverse.prototype.do =
@@ -339,7 +340,7 @@ module.exports = library.export(
       this.isDirty = false
       this.lastSave = new Date()
 
-      console.log("\n===\nNEW LOG\n===\n"+this.source())
+      console.log("\n===\nNEW LOG\n"+this.source()+"\n===\n")
 
       if (isOffline) {
         handleResponse.call(this)
