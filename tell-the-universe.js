@@ -48,6 +48,7 @@ module.exports = library.export(
       tellIt.playItBack = playItBack.bind(universe)
       tellIt.onLibrary = onLibrary.bind(universe)
       tellIt.isReady = isReady.bind(universe)
+      tellIt.source = ModuleUniverse.prototype.source.bind(universe)
       tellIt.load = load.bind(universe)
       tellIt.onAllReady = onAllReady
 
@@ -285,26 +286,25 @@ module.exports = library.export(
       }
     }
 
-    ModuleUniverse.prototype.source =
-      function() {
-        if (typeof this.baseLog == "string") {
-          var base = this.baseLog
-        } else {
-          var base = this.baseLog.toString()
-        }
-
-        var generator = base
-          .replace(
-            / +\/\/ begin/,
-            "  "+this.log.join("\n  ")+"\n  // begin"
-          )
-          .replace(
-            / *}$/,
-            "}"
-          )
-
-        return generator
+    ModuleUniverse.prototype.source = function() {
+      if (typeof this.baseLog == "string") {
+        var base = this.baseLog
+      } else {
+        var base = this.baseLog.toString()
       }
+
+      var generator = base
+        .replace(
+          / +\/\/ begin/,
+          "  "+this.log.join("\n  ")+"\n  // begin"
+        )
+        .replace(
+          / *}$/,
+          "}"
+        )
+
+      return generator
+    }
 
     ModuleUniverse.prototype.path =
       function() {
