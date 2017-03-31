@@ -36,3 +36,5 @@ Data loading can be debugged using your normal software debugging tools.
 The disk format for your data is human readable.
 
 Logs can be trivially split up and recombined in interesting ways.
+
+You can easily set up test fixtures just by copying and pasting production logs into tests.
