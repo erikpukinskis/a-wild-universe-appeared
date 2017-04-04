@@ -2,8 +2,7 @@ var library = require("module-library")(require)
 
 module.exports = library.export(
   "tell-the-universe",
-  ["knox"],
-  function(knox) {
+  function() {
 
     var globalUniverse
     var isOffline = true
@@ -134,7 +133,7 @@ module.exports = library.export(
 
     function persistToS3(options) {
       var universe = universeFor(this)
-      universe.s3 = knox.createClient(options)
+      universe.s3 = require("knox").createClient(options)
     }
 
     function isReady() {
@@ -333,9 +332,6 @@ module.exports = library.export(
     }
 
     function persistNow() {
-      var log = new Buffer(
-        this.source()
-      )
 
       this.isDirty = false
       this.lastSave = new Date()
@@ -345,6 +341,8 @@ module.exports = library.export(
       if (isOffline) {
         handleResponse.call(this)
       } else {
+        var log = new Buffer(this.source())
+
         this.s3.putBuffer(
           log,
           this.path(),
