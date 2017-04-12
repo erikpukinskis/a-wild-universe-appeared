@@ -56,7 +56,7 @@ module.exports = library.export(
       return tellIt
     }
 
-    function builder() {
+    var builder = ModuleUniverse.prototype.builder = function() {
       return eval("("+this.source()+")")
     }
 
