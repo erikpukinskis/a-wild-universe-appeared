@@ -45,8 +45,10 @@ module.exports = library.export(
       tellIt.persistToS3 = persistToS3.bind(universe)
       tellIt.loadFromS3 = loadFromS3.bind(universe)
       tellIt.playItBack = playItBack.bind(universe)
+      tellIt.builder = builder.bind(universe)
       tellIt.onLibrary = onLibrary.bind(universe)
       tellIt.isReady = isReady.bind(universe)
+      tellIt.onStatement = onStatement.bind(universe)
       tellIt.source = ModuleUniverse.prototype.source.bind(universe)
       tellIt.load = load.bind(universe)
       tellIt.onAllReady = onAllReady
@@ -54,6 +56,13 @@ module.exports = library.export(
       return tellIt
     }
 
+    function builder() {
+      return eval("("+this.source()+")")
+    }
+
+    function onStatement(callback) {
+      this.waitingForStatement.push(callback)
+    }
 
     function ModuleUniverse() {
       for(var i=0; i<arguments.length; i++) {
@@ -74,6 +83,7 @@ module.exports = library.export(
 
       this.log = []
       this.waitingForReady = []
+      this.waitingForStatement = []
       this.isWaiting = false
       this.isSaving = false
       this.isDirty = false
@@ -228,13 +238,23 @@ module.exports = library.export(
         }
       }
 
-    function playItBack() {
+    function playItBack(options) {
       var universe = universeFor(this)
 
-      ;(universe.library || library).using(
-        universe.modulePaths,
-        eval("("+universe.source()+")")
-      )
+      var lib = universe.library || library
+
+      var singletons = (options && options.singletons) || universe.singletons
+
+      if (!singletons) {
+        lib.using(
+          universe.modulePaths,
+          function() {
+            singletons = universe.singletons = arguments
+          }
+        )
+      }
+
+      universe.builder().apply(null, singletons)
 
       console.log("\n===\nREPLAYED LOG\n"+universe.source()+"\n===\n")
     }
@@ -246,6 +266,10 @@ module.exports = library.export(
         var line = call+"("+paramString+")"
         test(call, line)
         this.log.push(line)
+        for(var i=0; i<this.waitingForStatement.length; i++) {
+          this.waitingForStatement[i](call, args)
+        }
+
         this.persist()
       }
 
@@ -336,7 +360,7 @@ module.exports = library.export(
       this.isDirty = false
       this.lastSave = new Date()
 
-      console.log("\n===\nNEW LOG\n"+this.source()+"\n===\n")
+      console.log("\n===\nNEW LOG for "+this.name+"\n"+this.source()+"\n===\n")
 
       if (isOffline) {
         handleResponse.call(this)
