@@ -49,9 +49,12 @@ module.exports = library.export(
       tellIt.onLibrary = onLibrary.bind(universe)
       tellIt.isReady = isReady.bind(universe)
       tellIt.onStatement = onStatement.bind(universe)
+      tellIt.markAsUnplayed = markAsUnplayed.bind(universe)
+      tellIt.fork = fork.bind(universe)
       tellIt.source = ModuleUniverse.prototype.source.bind(universe)
       tellIt.load = load.bind(universe)
       tellIt.onAllReady = onAllReady
+      tellIt.do = tellTheUniverse.bind(universe)
 
       return tellIt
     }
@@ -88,6 +91,32 @@ module.exports = library.export(
       this.isSaving = false
       this.isDirty = false
     }
+
+    var parents = 0
+
+    function fork(newName) {
+      parents++
+      var parentName = "parent-"+parents
+      var parent = new ModuleUniverse(parentName)
+      parent.log = this.log
+      parent.baseLog = this.baseLog
+      parent.names = this.names
+      parent.modulePaths = this.modulePaths
+
+      var fork = new ModuleUniverse(newName)
+      fork.baseLog = newBaseLog(this.names)
+      fork.names = this.names
+      fork.modulePaths = this.modulePaths
+      fork.parent = parent
+
+      this.baseLog = newBaseLog(this.names)
+      this.log = []
+      this.parent = parent
+
+      return bindTo(fork)
+    }
+
+
 
     var universesByName = {}
 
@@ -129,14 +158,16 @@ module.exports = library.export(
         names.push(name)
       }
 
-      var logScript = "(function("+names.join(", ")+") {\n  // begin\n})"
-
-      var baseLog = eval(logScript)
-      universe.baseLog = baseLog
+      universe.baseLog = newBaseLog(names)
       universe.modulePaths = paths
+      universe.names = names
       universe.signature = signature
 
       return bindTo(universe)
+    }
+
+    function newBaseLog(names) {
+      return eval("(function("+names.join(", ")+") {\n  // begin\n})")
     }
 
     ModuleUniverse.prototype.persistToS3 = persistToS3
@@ -241,6 +272,16 @@ module.exports = library.export(
     function playItBack(options) {
       var universe = universeFor(this)
 
+      if (universe.wasPlayed && options && options.skipIfPlayed) {
+        return
+      } else if (universe.wasPlayed) {
+        throw new Error("Already played universe \""+universe.name+"\"")
+      }
+
+      if (universe.parent) {
+        playItBack.call(universe.parent, {skipIfPlayed: true})
+      }
+
       var lib = universe.library || library
 
       var singletons = (options && options.singletons) || universe.singletons
@@ -254,9 +295,16 @@ module.exports = library.export(
         )
       }
 
+      console.log("\n===\nREPLAYING LOG "+universe.name+"\n"+universe.source()+"\n===\n")
+
       universe.builder().apply(null, singletons)
 
-      console.log("\n===\nREPLAYED LOG\n"+universe.source()+"\n===\n")
+      universe.wasPlayed = true 
+    }
+
+    function markAsUnplayed(universe) {
+      var universe = universeFor(this)
+      universe.wasPlayed = false      
     }
 
     ModuleUniverse.prototype.do =
