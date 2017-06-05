@@ -295,7 +295,7 @@ module.exports = library.export(
         )
       }
 
-      console.log("\n===\nREPLAYING LOG "+universe.name+"\n"+universe.source()+"\n===\n")
+      universe.info("\n===\nREPLAYING LOG "+universe.name+"\n"+universe.source()+"\n===\n")
 
       universe.builder().apply(null, singletons)
 
@@ -305,6 +305,11 @@ module.exports = library.export(
     function markAsUnplayed(universe) {
       var universe = universeFor(this)
       universe.wasPlayed = false      
+    }
+
+    ModuleUniverse.prototype.info = function() {
+      if (this.quiet) { return }
+      console.log.apply(null, arguments)
     }
 
     ModuleUniverse.prototype.do =
@@ -408,7 +413,7 @@ module.exports = library.export(
       this.isDirty = false
       this.lastSave = new Date()
 
-      console.log("\n===\nNEW LOG for "+this.name+"\n"+this.source()+"\n===\n")
+      this.info("\n===\nNEW LOG for "+this.name+"\n"+this.source()+"\n===\n")
 
       if (isOffline) {
         handleResponse.call(this)
