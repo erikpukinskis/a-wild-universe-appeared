@@ -55,8 +55,18 @@ module.exports = library.export(
       tellIt.load = load.bind(universe)
       tellIt.onAllReady = onAllReady
       tellIt.do = tellTheUniverse.bind(universe)
+      tellIt.mute = mute.bind(universe)
 
       return tellIt
+    }
+
+    function mute(value) {
+      var universe = universeFor(this)
+      if (value === false) {
+        universe.quiet = false
+      } else {
+        universe.quiet = true
+      }
     }
 
     var builder = ModuleUniverse.prototype.builder = function() {
