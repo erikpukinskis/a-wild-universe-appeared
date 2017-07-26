@@ -1,20 +1,21 @@
 **tell-the-universe** logs simple function calls so they can be played back again.
 
 ```javascript
-var tellTheUniverse = require("tell-the-universe")
+var aWildUniverseAppeared = require("tell-the-universe")
 ```
 
 Create a universe called "meals" that uses the npm module called "my-pantry":
 
 ```javascript
-tellTheUniverse = tellTheUniverse.called("meals").withNames({"myPantry": "my-pantry"})
+universe = aWildUniverseAppeared("meals", {"myPantry": "my-pantry"})
 ``
 
 Sync it with S3:
 
 ```javascript
 // Set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables, then:
-tellTheUniverse.load(function() {
+universe.loadFromS3()
+universe.load(function() {
   // log has been played back
 })
 ```
@@ -22,9 +23,9 @@ tellTheUniverse.load(function() {
 Remember that a pantry existed:
 
 ```javascript
-tellTheUniverse("myPantry", "eriks-pantry")
-tellTheUniverse("myPantry.ingredient", "eriks-pantry", "paprika", "have")
-tellTheUniverse("myPantry.ingredient", "eriks-pantry", "cocoa", "need")
+universe.do("myPantry", "eriks-pantry")
+universe.do("myPantry.ingredient", "eriks-pantry", "paprika", "have")
+universe.do("myPantry.ingredient", "eriks-pantry", "cocoa", "need")
 ```
 
 ## Why?
