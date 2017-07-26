@@ -6,41 +6,38 @@ runTest(
   "can play events back",
 
   ["./", "./add"],
-  function(expect, done, tellTheUniverse, add) {
+  function(expect, done, aWildUniverseAppeared, add) {
 
-    tellTheUniverse = tellTheUniverse
-      .called("test")
-      .withNames({
+    var universe = aWildUniverseAppeared("test", {
         add: "./add"
       })
-      .onLibrary(runTest.library)
+
+    universe.useLibrary(runTest.library)
 
     var testS3 = !!process.env.AWS_ACCESS_KEY_ID
 
     if (testS3) {
-      tellTheUniverse.persistToS3({
+      universe.persistToS3({
         key: process.env.AWS_ACCESS_KEY_ID,
         secret: process.env.AWS_SECRET_ACCESS_KEY,
         bucket: "ezjs"
       })
     }
 
-    tellTheUniverse("add", 1)
-    tellTheUniverse("add", 4)
+    universe.do("add", 1)
+    universe.do("add", 4)
 
-    tellTheUniverse.markAsUnplayed()
+    universe.markAsUnplayed()
 
-    tellTheUniverse.playItBack()
+    universe.playItBack()
     expect(add.total).to.equal(5)
 
     if (testS3) {
-      tellTheUniverse.loadFromS3(
-        function ready(){
-          expect(tellTheUniverse.isReady()).to.be.true
-          done.ish("load from S3")
-          done()
-        }
-      )
+      universe.load(function ready(){
+        expect(universe.isReady()).to.be.true
+        done.ish("load from S3")
+        done()
+      })
     } else {
       done()
     }
@@ -50,19 +47,15 @@ runTest(
 runTest(
   "undefined args",
   ["./"],
-  function(expect, done, tellTheUniverse) {
+  function(expect, done, aWildUniverseAppeared) {
 
-
-    tellTheUniverse = tellTheUniverse
-      .called("test")
-      .withNames({
+    var universe = aWildUniverseAppeared("test", {
         add: "./add"
       })
 
-    tellTheUniverse("add", "foo", undefined)
-    tellTheUniverse.markAsUnplayed()
-
-    tellTheUniverse.playItBack()
+    universe.do("add", "foo", undefined)
+    universe.markAsUnplayed()
+    universe.playItBack()
 
     done()
   }
@@ -128,10 +121,10 @@ runTest.library.define(
 runTest(
   "forking",
   ["./", "story"],
-  function(expect, done, tellTheUniverse, story) {
+  function(expect, done, aWildUniverseAppeared, story) {
 
-    var orig = tellTheUniverse.called(
-      "original").withNames({"story": "story"})
+    var orig = aWildUniverseAppeared(
+      "original", {"story": "story"})
 
     orig.do("story", "new novel")
     orig.do("story.addLine", "new novel",     "It was a dark and stormy night.")

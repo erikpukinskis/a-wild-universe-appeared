@@ -1,110 +1,66 @@
 var library = require("module-library")(require)
 
+
 module.exports = library.export(
   "tell-the-universe",
   function() {
 
-    var globalUniverse
-    var isOffline = true
+    function aWildUniverseAppeared(name, pathsByName) {
+      var universe = new ModuleUniverse(name)
 
-    function universeFor(reference) {
-      if (reference.DTRACE_NET_SERVER_CONNECTION) {
-        throw new Error("bound universe function to global scope")
+      var signature = JSON.stringify(pathsByName)
+
+      var paths = []
+      var names = []
+
+      for(var name in pathsByName) {
+        var modulePath = pathsByName[name]
+        paths.push(modulePath)
+        names.push(name)
       }
-      if (reference.universe == 1) {
-        var universe = globalUniverse || newGlobalUniverse()
-      } else {
-        var universe = reference
-      }
+
+      universe.baseLog = newBaseLog(names)
+      universe.modulePaths = paths
+      universe.names = names
+      universe.signature = signature
 
       return universe
     }
 
-    function newGlobalUniverse() {
-      globalUniverse = new ModuleUniverse()
-      return globalUniverse
-    }
-
-    function tellTheUniverse() {
-      var universe = universeFor(this)
-
-      if (!universe.baseLog) {
-        var name = universe.name
-        name = name && name+" " || ""
-
-        throw new Error("Can't tell the universe "+name+"anything if it doesn't know what words you speak with! Try tellTheUniverse = tellTheUniverse.called(\"whatever\").withNames({someName: \"path-to-some-module\"})")
+    function ModuleUniverse(name, next) {
+      if (typeof name != "string" || typeof next != "undefined") {
+        throw new Error("ModuleUniverse constructor takes just a name")
       }
 
-      universe.do.apply(universe, arguments)
-    }
-
-    function bindTo(universe) {
-      var tellIt = tellTheUniverse.bind(universe)
-      tellIt.withNames = withNames.bind(universe)
-      tellIt.called = callIt.bind(universe)
-      tellIt.persistToS3 = persistToS3.bind(universe)
-      tellIt.loadFromS3 = loadFromS3.bind(universe)
-      tellIt.playItBack = playItBack.bind(universe)
-      tellIt.builder = builder.bind(universe)
-      tellIt.onLibrary = onLibrary.bind(universe)
-      tellIt.isReady = isReady.bind(universe)
-      tellIt.onStatement = onStatement.bind(universe)
-      tellIt.markAsUnplayed = markAsUnplayed.bind(universe)
-      tellIt.fork = fork.bind(universe)
-      tellIt.source = ModuleUniverse.prototype.source.bind(universe)
-      tellIt.load = load.bind(universe)
-      tellIt.onAllReady = onAllReady
-      tellIt.do = tellTheUniverse.bind(universe)
-      tellIt.mute = mute.bind(universe)
-
-      return tellIt
-    }
-
-    function mute(value) {
-      var universe = universeFor(this)
-      if (value === false) {
-        universe.quiet = false
-      } else {
-        universe.quiet = true
-      }
-    }
-
-    var builder = ModuleUniverse.prototype.builder = function() {
-      return eval("("+this.source()+")")
-    }
-
-    function onStatement(callback) {
-      this.waitingForStatement.push(callback)
-    }
-
-    function ModuleUniverse() {
-      for(var i=0; i<arguments.length; i++) {
-        var arg = arguments[i]
-
-        if (typeof arg == "string") {
-          this.name = arg
-        } else if (typeof arg == "function") {
-          this.baseLog = arg
-        } else if (arg.constructor.name == "Library") {
-          this.library = arg
-        } else if (Array.isArray(arg)) {
-          this.modulePaths = arg
-        } else {
-          throw new Error("Don't know what to do with ModuleUniverse arg "+arg)
-        }
-      }
-
+      this.name = name
+      this.library = null
+      this.modulePaths = null
+      this.baseLog = null
       this.log = []
       this.waitingForReady = []
       this.waitingForStatement = []
       this.isWaiting = false
       this.isSaving = false
       this.isDirty = false
+      this.quiet = false
+      this.persistenceEngine == "offline"
+    }
+
+    ModuleUniverse.prototype.mute = function mute(value) {
+      if (value === false) {
+        this.quiet = false
+      } else {
+        this.quiet = true
+      }
+    }
+
+    ModuleUniverse.prototype.builder = function() {
+      return eval("("+this.source()+")")
     }
 
     var parents = 0
 
-    function fork(newName) {
+    ModuleUniverse.prototype.fork = function(newName) {
       parents++
       var parentName = "parent-"+parents
       var parent = new ModuleUniverse(parentName)
@@ -123,151 +79,110 @@ module.exports = library.export(
       this.log = []
       this.parent = parent
 
-      return bindTo(fork)
+      return fork
     }
 
-
-
-    var universesByName = {}
-
-    function callIt(name) {
-      var named = universesByName[name]
-
-      if (named) {
-        return bindTo(named)
-      }
-      
-      var universe = universesByName[name] = new ModuleUniverse()
-      universe.name = name
-      return bindTo(universe)
-    }
-
-    function onLibrary(lib) {
-      if (!lib) {
-        throw new Error()
-      }
-      var universe = universeFor(this)
-      universe.library = lib
-      return bindTo(universe)
-    }
-
-    function withNames(pathsByName) {
-      var universe = universeFor(this)
-      var signature = JSON.stringify(pathsByName)
-
-      if (universe.signature && signature != universe.signature) {
-        throw new Error("Trying to use names "+signature+" on universe "+universe.name+" but it was already using names "+universe.signature)
-      }
-
-      var paths = []
-      var names = []
-
-      for(var name in pathsByName) {
-        var modulePath = pathsByName[name]
-        paths.push(modulePath)
-        names.push(name)
-      }
-
-      universe.baseLog = newBaseLog(names)
-      universe.modulePaths = paths
-      universe.names = names
-      universe.signature = signature
-
-      return bindTo(universe)
+    ModuleUniverse.prototype.useLibrary = function(lib) {
+      this.library = lib
     }
 
     function newBaseLog(names) {
       return eval("(function("+names.join(", ")+") {\n  // begin\n})")
     }
 
-    ModuleUniverse.prototype.persistToS3 = persistToS3
-
-    function persistToS3(options) {
-      var universe = universeFor(this)
-      universe.s3 = require("knox").createClient(options)
-    }
-
-    function isReady() {
-      var universe = universeFor(this)
-      return !universe.isWaiting
-    }
-
-    function load(callback) {
-      var universe = universeFor(this)
-
-      if (process.env.AWS_ACCESS_KEY_ID) {
-        isOffline = false
-
-        universe.persistToS3({
+    ModuleUniverse.prototype.persistToS3 = function(options) {
+      if (!options) {
+        options = {
           key: process.env.AWS_ACCESS_KEY_ID,
           secret: process.env.AWS_SECRET_ACCESS_KEY,
           bucket: "ezjs"
-        })
-
-        universe.loadFromS3(callback)
-      } else {
-        console.log("I have no Amazon credentials. There is nothing to load in the universe.")
+        }
       }
+
+      this.persistenceEngine = "s3"
+      this.s3 = require("knox").createClient(options)
     }
 
-    ModuleUniverse.prototype.loadFromS3 = loadFromS3
-
-    var waitingForAll = []
-    var loadingCount = 0
-    function onAllReady(callback) {
-      if (loadingCount == 0) {
-        callback()
-      } else {
-        waitingForAll.push(callback)
-      }
+    ModuleUniverse.prototype.isReady = function() {
+      return !this.isWaiting
     }
 
-    function loadFromS3(callback) {
-      var universe = universeFor(this)
+    ModuleUniverse.prototype.load = function(callback) {
 
-      if (!universe.s3) {
+      switch(this.persistenceEngine) {
+      case "offline":
+        throw new Error("Can't load an offline universe")
+        break;
+      case "s3":
+        this.loadFromS3(callback)
+        break;
+      default:
+        throw new Error("How to load?")
+      }
+
+    }
+
+    ModuleUniverse.prototype.writeToS3 = function() {
+      var log = new Buffer(this.source())
+
+      this.s3.putBuffer(
+        log,
+        this.path(),
+        {"Content-Type": "text/plain"},
+        handleS3WriteResponse.bind(this)
+      )
+    }
+
+    function handleS3WriteResponse(error, response) {
+      if (error) {
+        throw new Error(error)
+      }
+      if (response) {
+        response.pipe(process.stdout)
+      }
+      finishPersisting.call(this)
+    }
+
+    ModuleUniverse.prototype.loadFromS3 = function(callback) {
+
+      if (!this.s3) {
         console.log("WARNING: No AWS credentials, no persistence. We are dust in the wind.")
         return
       }
 
-      universe.isWaiting = true
+      this.isWaiting = true
 
-      var source = ""
+      this.baseLog = ""
 
-      loadingCount++
-      universe.s3.get(universe.path()).on('response',
-        function(res){
-          res.setEncoding('utf8')
-          res.on('data', append)
-          res.on('end', done)
-        }
-      ).end()
+      this.s3
+      .get(this.path())
+      .on("response", handleS3Response.bind(this))
+      .end()
+    }
 
-      function append(chunk){
-        source += chunk
+    function call(fn) { fn() }
+
+    function handleS3Response(response){
+      response.setEncoding('utf8')
+      response.on('data', appendS3Chunk.bind(this))
+      response.on('end', finishS3Load.bind(this))
+    }
+
+    function appendS3Chunk(chunk){
+      this.baseLog += chunk
+    }
+
+    function finishS3Load() {
+      if (this.baseLog[0] == "<") {
+        message = this.baseLog.match(/<Message>(.*)<\/Message>/)[1]
+        console.log("Nothing in "+this.name+" yet. Amazon says "+message)
+        this.baseLog = null
+      } else {
+        this.playItBack()
       }
-     
-
-      function done() {
-        loadingCount--
-        if (source[0] == "<") {
-          message = source.match(/<Message>(.*)<\/Message>/)[1]
-          console.log("Nothing in "+universe.name+" yet. Amazon says "+message)
-        } else {
-          universe.baseLog = source
-          playItBack.call(universe)
-        }
-        universe.waitingForReady.forEach(call)
-        universe.waitingForReady = []
-        universe.isWaiting = false
-        callback && callback()
-        if (loadingCount == 0) {
-          waitingForAll.map(call)
-          waitingForAll = []
-        }
-      }
-
-      function call(fn) { fn() }
+      this.waitingForReady.forEach(call)
+      this.waitingForReady = []
+      this.isWaiting = false
     }
 
     ModuleUniverse.prototype.onReady =
@@ -279,42 +194,41 @@ module.exports = library.export(
         }
       }
 
-    function playItBack(options) {
-      var universe = universeFor(this)
+    ModuleUniverse.prototype.playItBack = function(options) {
 
-      if (universe.wasPlayed && options && options.skipIfPlayed) {
+      if (this.wasPlayed && options && options.skipIfPlayed) {
         return
-      } else if (universe.wasPlayed) {
-        throw new Error("Already played universe \""+universe.name+"\"")
+      } else if (this.wasPlayed) {
+        throw new Error("Already played universe \""+this.name+"\"")
       }
 
-      if (universe.parent) {
-        playItBack.call(universe.parent, {skipIfPlayed: true})
+      if (this.parent) {
+        this.parent.playItBack({skipIfPlayed: true})
       }
 
-      var lib = universe.library || library
+      var lib = this.library || library
 
-      var singletons = (options && options.singletons) || universe.singletons
+      var singletons = (options && options.singletons) || this.singletons
 
       if (!singletons) {
+        var universe = this
         lib.using(
-          universe.modulePaths,
+          this.modulePaths,
           function() {
             singletons = universe.singletons = arguments
           }
         )
       }
 
-      console.log("\n===\nREPLAYING LOG "+universe.name+"\n"+universe.source()+"\n===\n")
+      this.info("\n===\nREPLAYING LOG "+this.name+"\n"+this.source()+"\n===\n")
 
-      universe.builder().apply(null, singletons)
+      this.builder().apply(null, singletons)
 
-      universe.wasPlayed = true 
+      this.wasPlayed = true 
     }
 
-    function markAsUnplayed(universe) {
-      var universe = universeFor(this)
-      universe.wasPlayed = false      
+    ModuleUniverse.prototype.markAsUnplayed = function() {
+      this.wasPlayed = false      
     }
 
     ModuleUniverse.prototype.do =
@@ -420,33 +334,22 @@ module.exports = library.export(
 
       console.log("\n===\nNEW LOG for "+this.name+"\n"+this.source()+"\n===\n")
 
-      if (isOffline) {
-        handleResponse.call(this)
-      } else {
-        var log = new Buffer(this.source())
-
-        this.s3.putBuffer(
-          log,
-          this.path(),
-          {"Content-Type": "text/plain"},
-          handleResponse.bind(this)
-        )
+      switch(this.persistenceEngine) {
+      case "offline":
+        finishPersisting.call(this)
+        break;
+      case "s3":
+        this.writeToS3()
       }
     }
 
-    function handleResponse(error, response) {
-      if (error) {
-        throw new Error(error)
-      }
+    function finishPersisting() {
       this.isSaving = false
       if (this.isDirty) {
         this.persist()
       }
-      if (response) {
-        response.pipe(process.stdout)
-      }
     }
 
-    return bindTo({universe: 1})
+    return aWildUniverseAppeared
   }
 )
