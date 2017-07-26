@@ -1,6 +1,29 @@
 var runTest = require("run-test")(require)
 
+runTest.only(
+  "can provide singletons")
 
+
+runTest(
+  "can provide singletons",
+
+  ["."],
+  function(expect, done, aWildUniverseAppeared) {
+
+    var count = 0
+    function increment() { count++ }
+
+    var universe = aWildUniverseAppeared("test", {
+        increment: increment
+      })
+
+    universe.do("increment")
+    universe.playItBack()
+    expect(count).to.equal(1)
+    
+    done()
+  }
+)
 
 runTest(
   "can play events back",

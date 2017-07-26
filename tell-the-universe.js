@@ -43,7 +43,7 @@ module.exports = library.export(
       this.isSaving = false
       this.isDirty = false
       this.quiet = false
-      this.persistenceEngine == "offline"
+      this.persistenceEngine = "offline"
     }
 
     ModuleUniverse.prototype.mute = function mute(value) {
@@ -90,19 +90,6 @@ module.exports = library.export(
       return eval("(function("+names.join(", ")+") {\n  // begin\n})")
     }
 
-    ModuleUniverse.prototype.persistToS3 = function(options) {
-      if (!options) {
-        options = {
-          key: process.env.AWS_ACCESS_KEY_ID,
-          secret: process.env.AWS_SECRET_ACCESS_KEY,
-          bucket: "ezjs"
-        }
-      }
-
-      this.persistenceEngine = "s3"
-      this.s3 = require("knox").createClient(options)
-    }
-
     ModuleUniverse.prototype.isReady = function() {
       return !this.isWaiting
     }
@@ -116,10 +103,54 @@ module.exports = library.export(
       case "s3":
         this.loadFromS3(callback)
         break;
+      case "localStorage":
+        this.loadFromLocalStorage(callback)
+        break;
       default:
         throw new Error("How to load?")
       }
 
+    }
+
+
+    // LocalStorage
+
+    ModuleUniverse.prototype.persistToLocalStorage = function() {
+      this.persistenceEngine = "localStorage"
+      this.storage = window.localStorage
+      if (!this.storage) {
+        throw new Error("No localStorage support")
+      }
+    }
+
+    ModuleUniverse.prototype.loadFromLocalStorage = function(callback) {
+      var loaded = this.storage.getItem(this.path())
+      if (loaded) {
+        this.baseLog = loaded
+        this.playItBack()
+      } else {
+        console.log("Nothing found in storage!")
+      }
+    }
+
+    ModuleUniverse.prototype.writeToLocalStorage = function() {
+      this.storage.setItem(this.path(), this.source())
+    }
+
+
+    // S3
+
+    ModuleUniverse.prototype.persistToS3 = function(options) {
+      if (!options) {
+        options = {
+          key: process.env.AWS_ACCESS_KEY_ID,
+          secret: process.env.AWS_SECRET_ACCESS_KEY,
+          bucket: "ezjs"
+        }
+      }
+
+      this.persistenceEngine = "s3"
+      this.s3 = require("knox").createClient(options)
     }
 
     ModuleUniverse.prototype.writeToS3 = function() {
@@ -185,6 +216,8 @@ module.exports = library.export(
       this.isWaiting = false
     }
 
+
+
     ModuleUniverse.prototype.onReady =
       function(callback) {
         if (!this.isWaiting) {
@@ -208,17 +241,16 @@ module.exports = library.export(
 
       var lib = this.library || library
 
-      var singletons = (options && options.singletons) || this.singletons
-
-      if (!singletons) {
-        var universe = this
-        lib.using(
-          this.modulePaths,
-          function() {
-            singletons = universe.singletons = arguments
-          }
-        )
-      }
+      var singletons = []
+      var paths = this.modulePaths
+      this.names.forEach(function(name, i) {
+        var path = paths[i]
+        if (typeof path == "string") {
+          singletons[i] = library.get(path)
+        } else if (typeof path == "function") {
+          singletons[i] = path
+        }
+      })
 
       this.info("\n===\nREPLAYING LOG "+this.name+"\n"+this.source()+"\n===\n")
 
@@ -340,6 +372,12 @@ module.exports = library.export(
         break;
       case "s3":
         this.writeToS3()
+        break;
+      case "localStorage":
+        this.writeToLocalStorage()
+        break;
+      default:
+        throw new Error("How to write "+this.persistenceEngine+"?")
       }
     }
 

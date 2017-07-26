@@ -8,7 +8,10 @@
     "knox": "*"
   },
   "devDependencies": {
-    "run-test": "*"
+    "run-test": "*",
+    "bridge-module": "*",
+    "web-element": "*",
+    "web-host": "*"
   },
   "scripts": {
     "test": "node test.js",
