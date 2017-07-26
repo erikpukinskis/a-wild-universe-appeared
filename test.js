@@ -1,34 +1,5 @@
 var runTest = require("run-test")(require)
 
-runTest.only("forking")
-
-runTest.library.define(
-  "a",
-  [runTest.library.ref()],
-  function(lib) {
-
-    function a(x) {
-      this.store.push(x)
-    }
-
-    function getAll() {
-      return this.store
-    }
-
-    function bind(context) {
-      var top = a.bind(context)
-      top.getAll = getAll.bind(context)
-      return top
-    }
-
-    return lib.generator(function() {
-      return bind({
-        store: []
-      })
-    })
-  }
-)
-
 
 
 runTest(
@@ -56,6 +27,8 @@ runTest(
 
     tellTheUniverse("add", 1)
     tellTheUniverse("add", 4)
+
+    tellTheUniverse.markAsUnplayed()
 
     tellTheUniverse.playItBack()
     expect(add.total).to.equal(5)
@@ -87,6 +60,7 @@ runTest(
       })
 
     tellTheUniverse("add", "foo", undefined)
+    tellTheUniverse.markAsUnplayed()
 
     tellTheUniverse.playItBack()
 
