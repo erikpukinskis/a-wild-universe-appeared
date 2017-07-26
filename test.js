@@ -1,6 +1,23 @@
 var runTest = require("run-test")(require)
 
 runTest(
+  "onStatement",
+  ["."],
+  function(expect, done, aWildUniverseAppeared) {
+
+    var universe = aWildUniverseAppeared("test", {})
+
+    universe.onStatement(function(call, args) {
+      expect(call).to.equal("hi")
+      expect(args).to.deep.equal(["you"])
+      done()
+    })
+
+    universe.do("hi", "you")
+  }
+)
+
+runTest(
   "can provide singletons",
 
   ["."],

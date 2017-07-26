@@ -272,6 +272,10 @@ module.exports = library.export(
       this.wasPlayed = false      
     }
 
+    ModuleUniverse.prototype.onStatement = function(callback) {
+      this.waitingForStatement.push(callback)
+    }
+
     ModuleUniverse.prototype.do =
       function(call) {
         var args = Array.prototype.slice.call(arguments, 1)
