@@ -1,9 +1,5 @@
 var runTest = require("run-test")(require)
 
-runTest.only(
-  "can provide singletons")
-
-
 runTest(
   "can provide singletons",
 

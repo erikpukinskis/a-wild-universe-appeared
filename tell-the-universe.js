@@ -216,8 +216,6 @@ module.exports = library.export(
       this.isWaiting = false
     }
 
-
-
     ModuleUniverse.prototype.onReady =
       function(callback) {
         if (!this.isWaiting) {
@@ -243,10 +241,16 @@ module.exports = library.export(
 
       var singletons = []
       var paths = this.modulePaths
+
       this.names.forEach(function(name, i) {
         var path = paths[i]
         if (typeof path == "string") {
-          singletons[i] = library.get(path)
+          library.using(
+            [path],
+            function(singleton) {
+              singletons[i] = singleton
+            }
+          )
         } else if (typeof path == "function") {
           singletons[i] = path
         }
@@ -257,6 +261,11 @@ module.exports = library.export(
       this.builder().apply(null, singletons)
 
       this.wasPlayed = true 
+    }
+
+    ModuleUniverse.prototype.info = function() {
+      if (this.quiet) { return }
+      console.log.apply(console, arguments)
     }
 
     ModuleUniverse.prototype.markAsUnplayed = function() {
