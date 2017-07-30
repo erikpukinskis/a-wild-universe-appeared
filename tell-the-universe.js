@@ -367,12 +367,14 @@ module.exports = library.export(
 
       this.isSaving = true
 
-      setTimeout(
-        persistNow.bind(this),
-        timeToWait)
+      if (this.persistenceEngine == "s3") {
+        setTimeout(this.persistNow.bind(this), timeToWait)
+      } else {
+        this.persistNow()
+      }
     }
 
-    function persistNow() {
+    ModuleUniverse.prototype.persistNow = function() {
 
       this.isDirty = false
       this.lastSave = new Date()
