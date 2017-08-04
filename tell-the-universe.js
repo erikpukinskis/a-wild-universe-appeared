@@ -390,6 +390,7 @@ module.exports = library.export(
         break;
       case "localStorage":
         this.writeToLocalStorage()
+        finishPersisting.call(this)
         break;
       default:
         throw new Error("How to write "+this.persistenceEngine+"?")
