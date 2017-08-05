@@ -8,13 +8,16 @@ Create a universe called "meals" that uses the npm module called "my-pantry":
 
 ```javascript
 universe = aWildUniverseAppeared("meals", {"myPantry": "my-pantry"})
-``
+```
 
 Sync it with S3:
 
 ```javascript
-// Set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables, then:
-universe.loadFromS3()
+universe.persistToS3({
+  key: process.env.AWS_ACCESS_KEY_ID,
+  secret: process.env.AWS_SECRET_ACCESS_KEY,
+  bucket: process.env.S3_BUCKET
+})
 universe.load(function() {
   // log has been played back
 })
