@@ -5,7 +5,7 @@ runTest(
   ["."],
   function(expect, done, aWildUniverseAppeared) {
 
-    var universe = aWildUniverseAppeared("test", {})
+    var universe = aWildUniverseAppeared("hellos", {})
 
     universe.onStatement(function(call, args) {
       expect(call).to.equal("hi")
@@ -26,7 +26,7 @@ runTest(
     var count = 0
     function increment() { count++ }
 
-    var universe = aWildUniverseAppeared("test", {
+    var universe = aWildUniverseAppeared("increments", {
         increment: increment
       })
 
@@ -44,7 +44,7 @@ runTest(
   ["./", "./add"],
   function(expect, done, aWildUniverseAppeared, add) {
 
-    var universe = aWildUniverseAppeared("test", {
+    var universe = aWildUniverseAppeared("adding", {
         add: "./add"
       })
 
@@ -85,7 +85,7 @@ runTest(
   ["./"],
   function(expect, done, aWildUniverseAppeared) {
 
-    var universe = aWildUniverseAppeared("test", {
+    var universe = aWildUniverseAppeared("more adding", {
         add: "./add"
       })
 

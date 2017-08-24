@@ -5,10 +5,21 @@ module.exports = library.export(
   "tell-the-universe",
   function() {
 
+    var cached = {}
+    var signatures = {}
+
     function aWildUniverseAppeared(name, pathsByName) {
       var universe = new ModuleUniverse(name)
 
-      var signature = JSON.stringify(pathsByName)
+      var signature = pathsToSignature(pathsByName)
+
+      if (cached[name]) {
+        if (signature != signatures[name]) {
+          throw new Error("Already created a universe called "+name+" but it has a different signature: "+signatures[name]+". You wanted to initialize a universe with this signature: "+signature)
+        }
+
+        return cached[name]
+      }
 
       var paths = []
       var names = []
@@ -24,7 +35,19 @@ module.exports = library.export(
       universe.names = names
       universe.signature = signature
 
+      cached[name] = universe
+      signatures[name] = signature
+      
       return universe
+    }
+
+    function pathsToSignature(obj) {
+      var str = [];
+      for(var p in obj)
+        if (obj.hasOwnProperty(p)) {
+          str.push(encodeURIComponent(p) + "=" + encodeURIComponent(obj[p]));
+        }
+      return str.join("&");
     }
 
     function ModuleUniverse(name, next) {
