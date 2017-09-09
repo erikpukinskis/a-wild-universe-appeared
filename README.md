@@ -31,6 +31,13 @@ universe.do("myPantry.ingredient", "eriks-pantry", "paprika", "have")
 universe.do("myPantry.ingredient", "eriks-pantry", "cocoa", "need")
 ```
 
+Quiet the incessant logging:
+
+```javascript
+universe.mute()
+universe.mute(false) // turn it back on
+```
+
 ## Why?
 
 You can persist things by storing source files.
