@@ -52,7 +52,7 @@ You can easily set up test fixtures just by copying and pasting production logs 
 
 ## Why it's amazing
 
-Whenever you persist data, it logs the logs out to the console, so you can copy test data that results from your interaction into your demo code.
+Whenever you persist data, it dumps the new universe log to the console, so you can copy test data that results from your interaction into your demo code.
 
 That makes it super easy to construct test cases that you can use while you are iterating your code:
 
