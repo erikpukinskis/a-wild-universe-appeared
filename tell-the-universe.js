@@ -402,7 +402,7 @@ module.exports = library.export(
       this.isDirty = false
       this.lastSave = new Date()
 
-      console.log("\n===\nNEW LOG for "+this.name+"\n"+this.source()+"\n===\n")
+      this.info("\n===\nNEW LOG for "+this.name+"\n"+this.source()+"\n===\n")
 
       switch(this.persistenceEngine) {
       case "offline":
