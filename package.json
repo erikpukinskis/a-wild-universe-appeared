@@ -1,8 +1,8 @@
 {
-  "name": "tell-the-universe",
-  "version": "0.28.0",
+  "name": "a-wild-universe-appeared",
+  "version": "0.29.0",
   "description": "Build up a log of function calls for replaying later",
-  "main": "tell-the-universe.js",
+  "main": "a-wild-universe-appeared.js",
   "dependencies": {
     "module-library": "*",
     "knox": "*"
@@ -20,6 +20,6 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/erikpukinskis/tell-the-universe.git"
+    "url": "https://github.com/erikpukinskis/a-wild-universe-appeared.git"
   }
 }

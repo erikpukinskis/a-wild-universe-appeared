@@ -2,7 +2,7 @@ var library = require("module-library")(require)
 
 
 module.exports = library.export(
-  "tell-the-universe",
+  "a-wild-universe-appeared",
   function() {
 
     var cached = {}
