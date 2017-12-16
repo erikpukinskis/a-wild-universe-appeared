@@ -1,7 +1,7 @@
-**tell-the-universe** logs simple function calls so they can be played back again.
+**a-wild-universe-appeared** logs simple function calls so they can be played back again.
 
 ```javascript
-var aWildUniverseAppeared = require("tell-the-universe")
+var aWildUniverseAppeared = require("a-wild-universe-appeared")
 ```
 
 Create a universe called "meals" that uses the npm module called "my-pantry":
