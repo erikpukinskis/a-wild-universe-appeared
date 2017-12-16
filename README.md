@@ -10,7 +10,7 @@ Create a universe called "meals" that uses the npm module called "my-pantry":
 universe = aWildUniverseAppeared("meals", {"myPantry": "my-pantry"})
 ```
 
-Sync it with S3:
+### Sync it with S3:
 
 ```javascript
 universe.persistToS3({
@@ -23,7 +23,7 @@ universe.load(function() {
 })
 ```
 
-Remember that a pantry existed:
+### Remember that a pantry existed:
 
 ```javascript
 universe.do("myPantry", "eriks-pantry")
@@ -31,14 +31,28 @@ universe.do("myPantry.ingredient", "eriks-pantry", "paprika", "have")
 universe.do("myPantry.ingredient", "eriks-pantry", "cocoa", "need")
 ```
 
-Quiet the incessant logging:
+### Quiet the incessant logging:
 
 ```javascript
 universe.mute()
 universe.mute(false) // turn it back on
 ```
 
-## Why?
+### See the current log:
+
+```javascript
+console.log(universe.source())
+```
+will give you:
+```javascript
+function (myPantry) {
+  myPantry("eriks-pantry")
+  myPantry.ingredient("eriks-pantry", "paprika", "have")
+  myPantry.ingredient("eriks-pantry", "cocoa", "need")
+  // begin
+}
+```
+### Why?
 
 You can persist things by storing source files.
 
@@ -50,7 +64,7 @@ Logs can be trivially split up and recombined in interesting ways.
 
 You can easily set up test fixtures just by copying and pasting production logs into tests.
 
-## Why it's amazing
+### Why it's amazing
 
 Whenever you persist data, it dumps the new universe log to the console, so you can copy test data that results from your interaction into your demo code.
 
