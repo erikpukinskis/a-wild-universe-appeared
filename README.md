@@ -30,6 +30,13 @@ universe.do("myPantry", "eriks-pantry")
 universe.do("myPantry.ingredient", "eriks-pantry", "paprika", "have")
 universe.do("myPantry.ingredient", "eriks-pantry", "cocoa", "need")
 ```
+### Replay the log:
+
+```javascript
+universe.playItBack()
+var haves = myPantry.listHaves("eriks-pantry")
+// Returns ["paprika")
+```
 
 ### Quiet the incessant logging:
 
