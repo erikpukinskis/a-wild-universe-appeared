@@ -59,6 +59,17 @@ function (myPantry) {
   // begin
 }
 ```
+
+### Listen to the log:
+
+```javascript
+myPantry.onStatement(
+  function(functionName, args) {
+    console.log(functionName+" was called with "+args.length+" arguments")
+  }
+)
+```
+
 ### Why?
 
 You can persist things by storing source files.
