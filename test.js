@@ -16,9 +16,9 @@ runTest(
     }
 
     var universe = aWildUniverseAppeared("equis", {horse: "a-horse"})
+    universe.mute()
 
     universe.mirrorTo({"a-horse": horse})
-
     universe.do("horse", "Tim")
     universe.do("horse.bray", "NEeeehhh")
 
@@ -36,6 +36,7 @@ runTest(
   function(expect, done, aWildUniverseAppeared) {
 
     var universe = aWildUniverseAppeared("hellos", {})
+    universe.mute()
 
     universe.onStatement(function(call, args) {
       expect(call).to.equal("hi")
@@ -59,6 +60,7 @@ runTest(
     var universe = aWildUniverseAppeared("increments", {
         increment: increment
       })
+    universe.mute()
 
     universe.do("increment")
     universe.playItBack()
@@ -77,6 +79,7 @@ runTest(
     var universe = aWildUniverseAppeared("adding", {
         add: "./add"
       })
+    universe.mute()
 
     universe.useLibrary(runTest.library)
 
@@ -118,6 +121,7 @@ runTest(
     var universe = aWildUniverseAppeared("more adding", {
         add: "./add"
       })
+    universe.mute()
 
     universe.do("add", "foo", undefined)
     universe.markAsUnplayed()
@@ -191,6 +195,7 @@ runTest(
 
     var orig = aWildUniverseAppeared(
       "original", {"story": "story"})
+    orig.mute()
 
     orig.do("story", "new novel")
     orig.do("story.addLine", "new novel",     "It was a dark and stormy night.")
@@ -204,6 +209,7 @@ runTest(
       "It was a dark and stormy night.\nThe maid screamed. A door slammed.")
 
     var fork = orig.fork("fancy")
+    fork.mute()
 
     fork.do("story.fork", "new novel", "rewrite")
 
