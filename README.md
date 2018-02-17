@@ -60,7 +60,9 @@ function (myPantry) {
 }
 ```
 
-### Listen to the log:
+### Listen to the log
+
+If you want to do something whenever the log gets appended, like maybe you want to save the entry to a server, or you want to do some metrics thing, there's a method for that:
 
 ```javascript
 myPantry.onStatement(
@@ -69,6 +71,29 @@ myPantry.onStatement(
   }
 )
 ```
+
+### Mirror the log to some singletons
+
+If you have statements coming in from somewhere else, like from a client on some other machine, and you want those statements to be reflected in your current state, you can pass some singletons in to a universe for it to play into:
+
+```javascript
+universe.mirrorTo({
+  "my-pantry": myPantry})
+universe.do("myPantry", "work-kitchen")
+// myPantry will have been called with "work-kitchen"
+```
+
+You can do a similar thing when playing back the entire log:
+
+```javascript
+universe.playItBack({
+  singletons: {
+    "my-pantry": myPantry
+  }
+)
+```
+
+... although it will default to using the current module-library's singletons.
 
 ### Why?
 
