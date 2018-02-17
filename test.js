@@ -1,6 +1,36 @@
 var runTest = require("run-test")(require)
 
 runTest(
+  "mirrorTo",
+  ["."],
+  function(expect, done, aWildUniverseAppeared) {
+
+    var horses = []
+    var sounds = []
+
+    function horse(name) {
+      horses.push(name)
+    }
+    horse.bray = function(sound) {
+      sounds.push(sound)
+    }
+
+    var universe = aWildUniverseAppeared("equis", {horse: "a-horse"})
+
+    universe.mirrorTo({"a-horse": horse})
+
+    universe.do("horse", "Tim")
+    universe.do("horse.bray", "NEeeehhh")
+
+    expect(horses).to.deep.equal(["Tim"])
+    expect(sounds).to.deep.equal(["NEeeehhh"])
+
+    done()
+  }
+)
+
+
+runTest(
   "onStatement",
   ["."],
   function(expect, done, aWildUniverseAppeared) {

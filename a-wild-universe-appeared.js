@@ -31,6 +31,7 @@ module.exports = library.export(
       }
 
       universe.baseLog = newBaseLog(names)
+      universe.pathsByName = pathsByName
       universe.modulePaths = paths
       universe.names = names
       universe.signature = signature
@@ -67,6 +68,7 @@ module.exports = library.export(
       this.isDirty = false
       this.quiet = false
       this.persistenceEngine = "offline"
+      this.singletons = undefined
     }
 
     ModuleUniverse.prototype.mute = function mute(value) {
@@ -297,6 +299,34 @@ module.exports = library.export(
 
     ModuleUniverse.prototype.onStatement = function(callback) {
       this.waitingForStatement.push(callback)
+    }
+
+    ModuleUniverse.prototype.mirrorTo = function(singletons) {
+      if (this.singletons) {
+        throw new Error("Already provided singletons to this universe")
+      }
+
+      this.singletons = singletons
+      this.onStatement(runStatement.bind(this)) }
+
+    function runStatement(functionName, args) {
+
+      var parts = functionName.split(".")
+      var variableName = parts[0]
+      var methodName = parts[1]
+
+      var path = this.pathsByName[variableName]
+      var singleton = this.singletons[path]
+
+      if (!singleton) {
+        throw new Error("You never provided a "+path+" singleton. Try universe.mirrorTo({"+JSON.stringify(path)+": "+variableName+"})")
+      }
+
+      if (methodName) {
+        singleton[methodName].apply(null, args)
+      } else {
+        singleton.apply(null, args)
+      }
     }
 
     ModuleUniverse.prototype.do =
