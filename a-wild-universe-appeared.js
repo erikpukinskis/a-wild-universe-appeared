@@ -61,6 +61,8 @@ module.exports = library.export(
       this.modulePaths = null
       this.baseLog = null
       this.log = []
+      this.marks = {}
+      this.didSyncToMark = null
       this.waitingForReady = []
       this.waitingForStatement = []
       this.isWaiting = false
@@ -69,6 +71,76 @@ module.exports = library.export(
       this.quiet = false
       this.persistenceEngine = "offline"
       this.singletons = undefined
+    }
+
+    ModuleUniverse.prototype.getLastSyncMark = function() {
+      return this.didSyncToMark
+    }
+
+    var lastMarkInteger = 1000*2000
+    ModuleUniverse.prototype.mark = function(isGlobal) {
+      lastMarkInteger++
+      var prefix = isGlobal ? "glo-" : "loc-"
+      var mark = prefix+lastMarkInteger.toString(36)
+      this.marks[mark] = this.log.length
+      return mark
+    }
+
+    ModuleUniverse.prototype.markSynced = function(localMark, globalMark) {
+      if (!globalMark) {
+        throw new Error("server didn't mark sync point")
+      }
+      this.marks[globalMark] = this.marks[localMark]
+      this.didSyncToMark = globalMark
+    }
+
+    ModuleUniverse.prototype.getStatements = function(fromMark, toMark) {
+      if (fromMark) {
+        var fromIndex = this.marks[fromMark]
+      } else {
+        var fromIndex = 0
+      }
+
+      if (toMark) {
+        var toIndex = this.marks[toMark]
+      } else {
+        var toIndex = this.log.length
+      }
+
+      return this.log.slice(fromIndex, toIndex)
+    }
+
+    ModuleUniverse.prototype.rewriteArguments = function(callPattern, argumentPosition, replacements) {
+
+      var baseLength = callPattern.length - 2
+      var anyMethod = callPattern.slice(baseLength, callPattern.length) == ".*"
+
+      if (anyMethod) {
+        var basePattern = callPattern.slice(0, baseLength)
+      }
+
+      function isMatch(entry) {
+        if (basePattern && entry.functionName.slice(0, baseLength) != basePattern) {
+          return false
+        } else if (!basePattern && entry.functionName != callPattern) {
+          return false
+        }
+
+        var currentValue = entry.args[argumentPosition]
+
+        return replacements.hasOwnProperty(currentValue)
+      }
+
+      this.log.forEach(
+        function(entry) {
+          if (!isMatch(entry)) {
+            return
+          }
+          var currentValue = entry.args[argumentPosition]
+          var newValue = replacements[currentValue]
+          entry.args[argumentPosition] = newValue
+        }
+      )
     }
 
     ModuleUniverse.prototype.mute = function mute(value) {
@@ -323,19 +395,33 @@ module.exports = library.export(
       }
 
       if (methodName) {
-        singleton[methodName].apply(null, args)
+        singleton[methodName].apply(singleton, args)
       } else {
-        singleton.apply(null, args)
+        singleton.apply(singleton, args)
       }
+    }
+
+    function entryToLine(entry) {
+      var paramString = entry.args.map(toString).join(", ")
+      var line = entry.functionName+"("+paramString+")"
+      return line
     }
 
     ModuleUniverse.prototype.do =
       function(call) {
         var args = Array.prototype.slice.call(arguments, 1)
-        var paramString = args.map(toString).join(", ")
-        var line = call+"("+paramString+")"
-        test(call, line)
-        this.log.push(line)
+
+        if (!call) {
+          throw new Error("no call")}
+
+        var entry = {
+          functionName: call,
+          args: args}
+
+        test(entry)
+
+        this.log.push(entry)
+
         for(var i=0; i<this.waitingForStatement.length; i++) {
           this.waitingForStatement[i](call, args)
         }
@@ -355,8 +441,8 @@ module.exports = library.export(
 
     function noop() {}
 
-    function test(call, line) {
-      var parts = call.split(".")
+    function test(entry) {
+      var parts = entry.functionName.split(".")
       var method = parts[1]
       var argName = parts[0]
 
@@ -366,6 +452,8 @@ module.exports = library.export(
       } else {
         var singleton = noop
       }
+
+      var line = entryToLine(entry)
 
       var source = "(function("+argName+") { "+line+" })"
 
@@ -389,7 +477,7 @@ module.exports = library.export(
       var generator = base
         .replace(
           / +\/\/ begin/,
-          "  "+this.log.join("\n  ")+"\n  // begin"
+          "  "+this.log.map(entryToLine).join("\n  ")+"\n  // begin"
         )
         .replace(
           / *}$/,
