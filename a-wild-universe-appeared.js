@@ -8,7 +8,7 @@ module.exports = library.export(
     var cached = {}
     var signatures = {}
 
-    function aWildUniverseAppeared(name, pathsByName) {
+    function aWildUniverseAppeared(name, pathsByName, baseLog) {
       var universe = new ModuleUniverse(name)
 
       var signature = pathsToSignature(pathsByName)
@@ -30,7 +30,7 @@ module.exports = library.export(
         names.push(name)
       }
 
-      universe.baseLog = newBaseLog(names)
+      universe.baseLog = baseLog || newBaseLog(names)
       universe.pathsByName = pathsByName
       universe.modulePaths = paths
       universe.names = names
@@ -51,15 +51,12 @@ module.exports = library.export(
       return str.join("&");
     }
 
-    function ModuleUniverse(name, next) {
-      if (typeof name != "string" || typeof next != "undefined") {
-        throw new Error("ModuleUniverse constructor takes just a name")
-      }
+    function ModuleUniverse(name, baseLog) {
 
       this.name = name
       this.library = null
       this.modulePaths = null
-      this.baseLog = null
+      this.baseLog = baseLog || null
       this.log = []
       this.marks = {}
       this.didSyncToMark = null
