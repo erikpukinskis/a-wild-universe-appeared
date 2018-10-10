@@ -277,32 +277,38 @@ module.exports = library.export(
 
       this.isWaiting = true
 
-      this.baseLog = ""
+      var finish = handleNewLog.bind(this)
+
+      var connect = concatenateChunks.bind(null, this.name, finish)
 
       this.s3
       .get(this.path())
-      .on("response", handleS3Response.bind(this))
+      .on("response", connect)
       .end()
     }
 
     function call(fn) { fn() }
 
-    function handleS3Response(response){
+    function concatenateChunks(name, callback, response){
+      var body = ""
       response.setEncoding('utf8')
-      response.on('data', appendS3Chunk.bind(this))
-      response.on('end', finishS3Load.bind(this))
+      response.on('data', function(chunk) {
+        body += chunk
+      })
+      response.on('end', function() {
+        if (body[0] == "<") {
+          var message = body.match(/<Message>(.*)<\/Message>/)[1]
+          console.log("Nothing in "+name+" yet. Amazon says "+message)
+          body = null
+        }
+
+        callback(body)
+      })
     }
 
-    function appendS3Chunk(chunk){
-      this.baseLog += chunk
-    }
-
-    function finishS3Load() {
-      if (this.baseLog[0] == "<") {
-        message = this.baseLog.match(/<Message>(.*)<\/Message>/)[1]
-        console.log("Nothing in "+this.name+" yet. Amazon says "+message)
-        this.baseLog = null
-      } else {
+    function handleNewLog(baseLog) {
+      if (baseLog) {
+        this.baseLog = baseLog
         this.playItBack()
       }
       this.waitingForReady.forEach(call)
