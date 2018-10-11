@@ -152,6 +152,38 @@ module.exports = library.export(
       return eval("("+this.source()+")")
     }
 
+    ModuleUniverse.prototype.loggingBuilder = function(log) {
+
+      var lines = this.source().split("\n")
+      var linesWithLoggers = []
+      var loggingSignature = lines[0].replace(/^ *[^\(]*\(/, "$&logFunction, ")
+
+      linesWithLoggers.push(loggingSignature)
+
+      for(var i = 1; i<lines.length-2; i++) {
+        linesWithLoggers.push(lines[i])
+        if (!lines[i].trim()) {
+          continue }
+        var parts = lines[i].match(/^ *([^\(]*)\((.*)\)$/)
+        var statement = parts[1]
+        var args = JSON.parse("["+parts[2]+"]")
+        args.unshift(statement)
+        var argArrayJson = JSON.stringify(args)
+        var withoutBraces = argArrayJson.substr(1,argArrayJson.length-2)
+        var loggerLine = "  logFunction("+withoutBraces+")"
+        linesWithLoggers.push(loggerLine)
+        if (i > 10) { break }
+      }
+
+      linesWithLoggers.push("}")
+
+      var source = "("+linesWithLoggers.join("\n")+")"
+      console.log(source)
+      var func = eval(source)
+
+      return func.bind(null, log)
+    }
+
     var parents = 0
 
     ModuleUniverse.prototype.fork = function(newName) {
@@ -358,7 +390,17 @@ module.exports = library.export(
 
       this.info("\n===\nREPLAYING LOG "+this.name+"\n"+this.source()+"\n===\n")
 
-      this.builder().apply(null, singletons)
+      if (options && options.logger) {
+        var builder = this.loggingBuilder(logger)
+      } else {
+        builder = this.builder()
+      }
+
+      builder.apply(null, singletons)
+
+      function logger(statement, args) {
+        console.log("played back", statement, args)
+      }
 
       this.wasPlayed = true 
     }
