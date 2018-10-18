@@ -63,6 +63,7 @@ runTest(
     universe.mute()
 
     universe.do("increment")
+
     universe.playItBack()
     expect(count).to.equal(1)
     
@@ -82,6 +83,7 @@ runTest(
     universe.mute()
 
     universe.useLibrary(runTest.library)
+    universe.loadSingletonsFromCommonJS()
 
     var testS3 = !!process.env.AWS_ACCESS_KEY_ID
 
@@ -122,6 +124,7 @@ runTest(
         add: "./add"
       })
     universe.mute()
+    universe.loadSingletonsFromCommonJS()
 
     universe.do("add", "foo", undefined)
     universe.markAsUnplayed()
@@ -196,6 +199,8 @@ runTest(
     var orig = aWildUniverseAppeared(
       "original", {"story": "story"})
     orig.mute()
+
+    orig.loadSingletonsFromCommonJS()
 
     orig.do("story", "new novel")
     orig.do("story.addLine", "new novel",     "It was a dark and stormy night.")

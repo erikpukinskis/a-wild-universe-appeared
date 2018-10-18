@@ -2,8 +2,9 @@ var library = require("module-library")(require)
 
 
 module.exports = library.export(
-  "a-wild-universe-appeared",
-  function() {
+  "a-wild-universe-appeared",[
+  library.ref()],
+  function(lib) {
 
     var cached = {}
     var signatures = {}
@@ -26,11 +27,13 @@ module.exports = library.export(
 
       for(var name in pathsByName) {
         var modulePath = pathsByName[name]
+        universe.moduleIndexByName[name] = paths.length
         paths.push(modulePath)
         names.push(name)
       }
 
       universe.baseLog = baseLog || newBaseLog(names)
+
       universe.pathsByName = pathsByName
       universe.modulePaths = paths
       universe.names = names
@@ -56,8 +59,10 @@ module.exports = library.export(
       this.name = name
       this.library = null
       this.modulePaths = null
+      this.pathsByName = null
+      this.moduleIndexByName = {}
       this.baseLog = baseLog || null
-      this.log = []
+      this.logEntries = []
       this.marks = {}
       this.didSyncToMark = null
       this.waitingForReady = []
@@ -67,7 +72,16 @@ module.exports = library.export(
       this.isDirty = false
       this.quiet = false
       this.persistenceEngine = "offline"
-      this.singletons = undefined
+      this.singletons = null
+      this.baseLogEntries = null
+    }
+
+    function baseLogHasEntries(baseLog) {
+      if (typeof baseLog == "function") {
+        baseLog = baseLog.toString()
+      }
+      if (!baseLog) { return false }
+      return !!baseLog.match(/  [a-zA-Z]/)
     }
 
     ModuleUniverse.prototype.getLastSyncMark = function() {
@@ -79,7 +93,7 @@ module.exports = library.export(
       lastMarkInteger++
       var prefix = isGlobal ? "glo-" : "loc-"
       var mark = prefix+lastMarkInteger.toString(36)
-      this.marks[mark] = this.log.length
+      this.marks[mark] = this.logEntries.length
       return mark
     }
 
@@ -101,10 +115,10 @@ module.exports = library.export(
       if (toMark) {
         var toIndex = this.marks[toMark]
       } else {
-        var toIndex = this.log.length
+        var toIndex = this.logEntries.length
       }
 
-      return this.log.slice(fromIndex, toIndex)
+      return this.logEntries.slice(fromIndex, toIndex)
     }
 
     ModuleUniverse.prototype.rewriteArguments = function(callPattern, argumentPosition, replacements) {
@@ -117,9 +131,9 @@ module.exports = library.export(
       }
 
       function isMatch(entry) {
-        if (basePattern && entry.functionName.slice(0, baseLength) != basePattern) {
+        if (basePattern && entry.functionIdentifier.slice(0, baseLength) != basePattern) {
           return false
-        } else if (!basePattern && entry.functionName != callPattern) {
+        } else if (!basePattern && entry.functionIdentifier != callPattern) {
           return false
         }
 
@@ -128,7 +142,7 @@ module.exports = library.export(
         return replacements.hasOwnProperty(currentValue)
       }
 
-      this.log.forEach(
+      this.logEntries.forEach(
         function(entry) {
           if (!isMatch(entry)) {
             return
@@ -148,61 +162,32 @@ module.exports = library.export(
       }
     }
 
-    ModuleUniverse.prototype.builder = function() {
-      return eval("("+this.source()+")")
-    }
-
-    ModuleUniverse.prototype.loggingBuilder = function(log) {
-
-      var lines = this.source().split("\n")
-      var linesWithLoggers = []
-      var loggingSignature = lines[0].replace(/^ *[^\(]*\(/, "$&logFunction, ")
-
-      linesWithLoggers.push(loggingSignature)
-
-      for(var i = 1; i<lines.length-2; i++) {
-        linesWithLoggers.push(lines[i])
-        if (!lines[i].trim()) {
-          continue }
-        var parts = lines[i].match(/^ *([^\(]*)\((.*)\)$/)
-        var statement = parts[1]
-        var args = JSON.parse("["+parts[2]+"]")
-        args.unshift(statement)
-        var argArrayJson = JSON.stringify(args)
-        var withoutBraces = argArrayJson.substr(1,argArrayJson.length-2)
-        var loggerLine = "  logFunction("+withoutBraces+")"
-        linesWithLoggers.push(loggerLine)
-        if (i > 10) { break }
-      }
-
-      linesWithLoggers.push("}")
-
-      var source = "("+linesWithLoggers.join("\n")+")"
-      console.log(source)
-      var func = eval(source)
-
-      return func.bind(null, log)
-    }
-
     var parents = 0
 
     ModuleUniverse.prototype.fork = function(newName) {
       parents++
       var parentName = "parent-"+parents
       var parent = new ModuleUniverse(parentName)
-      parent.log = this.log
+      parent.logEntries = this.logEntries
       parent.baseLog = this.baseLog
       parent.names = this.names
       parent.modulePaths = this.modulePaths
+      parent.pathsByName = this.pathsByName
+      parent.singletons = this.singletons
+      parent.moduleIndexByName = this.moduleIndexByName
 
       var fork = new ModuleUniverse(newName)
       fork.baseLog = newBaseLog(this.names)
       fork.names = this.names
       fork.modulePaths = this.modulePaths
+      fork.modulePaths = this.modulePaths
+      fork.pathsByName = this.pathsByName
+      fork.singletons = this.singletons
+      fork.moduleIndexByName = this.moduleIndexByName
       fork.parent = parent
 
       this.baseLog = newBaseLog(this.names)
-      this.log = []
+      this.logEntries = []
       this.parent = parent
 
       return fork
@@ -357,6 +342,26 @@ module.exports = library.export(
         }
       }
 
+    ModuleUniverse.prototype.loadSingletonsFromCommonJS = function() {
+      var singletons = this.singletons = []
+      var paths = this.modulePaths
+
+      var universe = this
+      this.names.forEach(function(name, i) {
+        var path = paths[i]
+        if (typeof path == "string") {
+          (universe.library || lib).using(
+            [path],
+            function(singleton) {
+              singletons[i] = singleton
+            }
+          )
+        } else if (typeof path == "function") {
+          singletons[i] = path
+        }
+      })      
+    }
+
     ModuleUniverse.prototype.playItBack = function(options) {
 
       if (this.wasPlayed && options && options.skipIfPlayed) {
@@ -371,38 +376,127 @@ module.exports = library.export(
 
       var lib = this.library || library
 
-      var singletons = []
-      var paths = this.modulePaths
-
-      this.names.forEach(function(name, i) {
-        var path = paths[i]
-        if (typeof path == "string") {
-          library.using(
-            [path],
-            function(singleton) {
-              singletons[i] = singleton
-            }
-          )
-        } else if (typeof path == "function") {
-          singletons[i] = path
-        }
-      })
-
       this.info("\n===\nREPLAYING LOG "+this.name+"\n"+this.source()+"\n===\n")
 
-      if (options && options.logger) {
-        var builder = this.loggingBuilder(logger)
-      } else {
-        builder = this.builder()
-      }
+      var callback = options && options.callback
 
-      builder.apply(null, singletons)
+      if (!this.baseLogEntries && baseLogHasEntries(this.baseLog)) {
+        throw new Error("Call universe.buildLinesFromBaseLog before universe.playItBack")}
 
-      function logger(statement, args) {
-        console.log("played back", statement, args)
-      }
+      this.callFunctionsFrom(
+        0,
+        10, //this.functionCalls.length-1,
+        callback)
 
       this.wasPlayed = true 
+    }
+
+
+    ModuleUniverse.prototype.builder = function() {
+      return eval("("+this.source()+")")
+    }
+
+    ModuleUniverse.prototype.callFunctionsFrom = function(index, maxIndex, callback) {
+
+      if (!this.baseLogEntries) {
+        var entry = this.logEntries[index]
+      } else if (index < this.baseLogEntries.length) {
+        var entry = this.baseLogEntries[index]
+      } else {
+        var entry = this.logEntries[index - this.baseLogEntries.length]
+      }
+
+      if (!entry || index > maxIndex) {
+        return }
+
+      callEntry(this, entry)
+
+      if (callback) {
+        var callNext = ModuleUniverse.prototype.callFunctionsFrom.bind(
+          this,
+          index+1,
+          maxIndex,
+          callback)
+
+        callback(
+          call.statement,
+          call.args,
+          callNext)}
+
+      else {
+        this.callFunctionsFrom(
+          index+1,
+          maxIndex)}}
+
+    function buildEntryFromLine(line) {
+      var parts = lines[i].match(/^ *([^\(]*)\((.*)\)$/)
+      var functionIdentifier = parts[1]
+      var args = JSON.parse("["+parts[2]+"]")
+      return buildEntry(functionIdentifier, args)
+    }
+
+    function buildEntry(functionIdentifier, args) {
+      var functionParts = functionIdentifier.split(".")
+      var singletonName = functionParts[0]
+      var methodName = functionParts[1]
+
+      return {
+        functionIdentifier: functionIdentifier,
+        singletonName: singletonName,
+        methodName: methodName,
+        args: args,
+      }
+    }
+
+    ModuleUniverse.prototype.buildLinesFromBaseLog = function() {
+
+      if (typeof this.baseLog == "function") {
+        var baseLog = this.baseLog.toString()
+      } else {
+        var baseLog = this.baseLog
+      }
+
+      var lines = baseLog.split("\n")
+      this.baseLogEntries = []
+
+      for(var i = 1; i<lines.length-2; i++) {
+        var line = lines[i]
+
+        if (!line.trim()) {
+          continue }
+
+        this.baseLogEntries.push(
+          buildEntryFromLine(
+            line))}
+    }
+
+    function callEntry(universe, entry) {
+      var singleton = universe.getSingleton(entry.singletonName)
+
+      if (!singleton) {
+        throw new Error("No singleton for statement "+entry.functionIdentifier)
+      }
+
+      if (entry.methodName) {
+        singleton[entry.methodName].apply(singleton, entry.args)
+      } else {
+        singleton.apply(null, entry.args)
+      }
+    }
+
+    ModuleUniverse.prototype.getSingleton = function(name) {
+      var path = this.pathsByName[name]
+      if (typeof path == "function") {
+        return path
+      }
+      var moduleIndex = this.moduleIndexByName[name]
+      var singleton = this.singletons && this.singletons[moduleIndex]
+
+      if (!singleton && this.parent) {
+        return this.parent.getSingleton()
+      }
+
+      return singleton
     }
 
     ModuleUniverse.prototype.info = function() {
@@ -426,9 +520,9 @@ module.exports = library.export(
       this.singletons = singletons
       this.onStatement(runStatement.bind(this)) }
 
-    function runStatement(functionName, args) {
+    function runStatement(functionIdentifier, args) {
 
-      var parts = functionName.split(".")
+      var parts = functionIdentifier.split(".")
       var variableName = parts[0]
       var methodName = parts[1]
 
@@ -448,27 +542,27 @@ module.exports = library.export(
 
     function entryToLine(entry) {
       var paramString = entry.args.map(toString).join(", ")
-      var line = entry.functionName+"("+paramString+")"
+      var line = entry.functionIdentifier+"("+paramString+")"
       return line
     }
 
     ModuleUniverse.prototype.do =
-      function(call) {
+      function(functionIdentifier) {
         var args = Array.prototype.slice.call(arguments, 1)
 
         if (!call) {
           throw new Error("no call")}
 
-        var entry = {
-          functionName: call,
-          args: args}
+        var entry = buildEntry(
+          functionIdentifier,
+          args)
 
         test(entry)
 
-        this.log.push(entry)
+        this.logEntries.push(entry)
 
         for(var i=0; i<this.waitingForStatement.length; i++) {
-          this.waitingForStatement[i](call, args)
+          this.waitingForStatement[i](functionIdentifier, args)
         }
 
         this.persist()
@@ -487,7 +581,7 @@ module.exports = library.export(
     function noop() {}
 
     function test(entry) {
-      var parts = entry.functionName.split(".")
+      var parts = entry.functionIdentifier.split(".")
       var method = parts[1]
       var argName = parts[0]
 
@@ -522,7 +616,7 @@ module.exports = library.export(
       var generator = base
         .replace(
           / +\/\/ begin/,
-          "  "+this.log.map(entryToLine).join("\n  ")+"\n  // begin"
+          "  "+this.logEntries.map(entryToLine).join("\n  ")+"\n  // begin"
         )
         .replace(
           / *}$/,
