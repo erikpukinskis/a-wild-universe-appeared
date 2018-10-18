@@ -429,7 +429,7 @@ module.exports = library.export(
           maxIndex)}}
 
     function buildEntryFromLine(line) {
-      var parts = lines[i].match(/^ *([^\(]*)\((.*)\)$/)
+      var parts = line.match(/^ *([^\(]*)\((.*)\)$/)
       var functionIdentifier = parts[1]
       var args = JSON.parse("["+parts[2]+"]")
       return buildEntry(functionIdentifier, args)
