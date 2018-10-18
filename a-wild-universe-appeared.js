@@ -419,8 +419,8 @@ module.exports = library.export(
           callback)
 
         callback(
-          call.statement,
-          call.args,
+          entry.functionIdentifier,
+          entry.args,
           callNext)}
 
       else {

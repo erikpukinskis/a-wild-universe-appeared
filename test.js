@@ -243,3 +243,46 @@ runTest(
   }
 )
 
+
+runTest(
+  "playback with a callback",
+  ["."],
+  function(expect, doneWithTest, aWildUniverseAppeared) {
+    var string = ""
+    function append(char) {
+      string = string + char
+    }
+
+    var universe = aWildUniverseAppeared(
+      "growing string",{
+        append: append,
+      })
+
+    universe.do("append", "a")
+    universe.do("append", "b")
+
+    var inFirstCallback = true
+    universe.playItBack({
+      callback: function(statement, args, doneWithStatement) {
+        if (inFirstCallback) {
+          expect(string).to.equal("a")
+          expect(statement).to.equal("append")
+          expect(args).to.deep.equal(["a"])
+          inFirstCallback = false
+
+        } else {
+          expect(string).to.equal("ab")
+          expect(statement).to.equal("append")
+          expect(args).to.deep.equal(["b"])
+
+          doneWithTest()
+        }
+        doneWithStatement()
+      }
+    })
+  }
+)
+
+
+
+
