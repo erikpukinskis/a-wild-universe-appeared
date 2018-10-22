@@ -237,8 +237,7 @@ module.exports = library.export(
     ModuleUniverse.prototype.loadFromLocalStorage = function(callback) {
       var loaded = this.storage.getItem(this.path())
       if (loaded) {
-        this.baseLog = loaded
-        this.playItBack()
+        handleNewLog(this, loaded)
       } else {
         console.log("Nothing found in storage!")
       }
@@ -294,7 +293,7 @@ module.exports = library.export(
 
       this.isWaiting = true
 
-      var finish = handleNewLog.bind(this)
+      var finish = handleNewLog.bind(null, this)
 
       var connect = concatenateChunks.bind(null, this.name, finish)
 
@@ -323,14 +322,15 @@ module.exports = library.export(
       })
     }
 
-    function handleNewLog(baseLog) {
+    function handleNewLog(universe, baseLog) {
       if (baseLog) {
-        this.baseLog = baseLog
-        this.playItBack()
+        universe.baseLog = baseLog
+        universe.buildLinesFromBaseLog()
+        universe.playItBack()
       }
-      this.waitingForReady.forEach(call)
-      this.waitingForReady = []
-      this.isWaiting = false
+      universe.waitingForReady.forEach(call)
+      universe.waitingForReady = []
+      universe.isWaiting = false
     }
 
     ModuleUniverse.prototype.onReady =
@@ -385,7 +385,7 @@ module.exports = library.export(
 
       this.callFunctionsFrom(
         0,
-        10, //this.functionCalls.length-1,
+        null,
         callback)
 
       this.wasPlayed = true 
@@ -406,7 +406,10 @@ module.exports = library.export(
         var entry = this.logEntries[index - this.baseLogEntries.length]
       }
 
-      if (!entry || index > maxIndex) {
+      if (!entry) {
+        return }
+
+      if (maxIndex && index > maxIndex) {
         return }
 
       callEntry(this, entry)
@@ -541,11 +544,33 @@ module.exports = library.export(
     }
 
     function entryToLine(entry) {
-      var paramString = entry.args.map(toString).join(", ")
+      var paramString = ""
+      entry.args.forEach(addParam)
+
+      function addParam (arg, i) {
+        try {
+          var value = toString(arg)
+          if (paramString) {
+            paramString += ", "
+          }
+          paramString += value
+        } catch(e) {
+          throw new Error(i+"th argument to universe statement "+entry.functionIdentifier+" couldn't be turned into JSON: ", value)}}
+
       var line = entry.functionIdentifier+"("+paramString+")"
+
       return line
     }
 
+    function toString(arg) {
+      if (typeof arg == "undefined") {
+        return "undefined"
+      } else if (typeof arg == "function") {
+        return arg.toString()
+      } else {
+        return JSON.stringify(arg)
+      }
+    }
     ModuleUniverse.prototype.do =
       function(functionIdentifier) {
         var args = Array.prototype.slice.call(arguments, 1)
@@ -567,16 +592,6 @@ module.exports = library.export(
 
         this.persist()
       }
-
-    function toString(arg) {
-      if (typeof arg == "undefined") {
-        return "undefined"
-      } else if (typeof arg == "function") {
-        return arg.toString()
-      } else {
-        return JSON.stringify(arg)
-      }
-    }
 
     function noop() {}
 
