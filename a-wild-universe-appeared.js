@@ -578,6 +578,12 @@ module.exports = library.export(
         if (!call) {
           throw new Error("no call")}
 
+        for(var i=0; i<args.length; i++) {
+          if (typeof args[i] == "undefined") {
+            throw new Error(i+"th arg to universe.do "+functionIdentifier+" was undefined.")
+          }
+        }
+        
         var entry = buildEntry(
           functionIdentifier,
           args)
