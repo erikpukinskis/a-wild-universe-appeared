@@ -433,6 +433,9 @@ module.exports = library.export(
 
     function buildEntryFromLine(line) {
       var parts = line.match(/^ *([^\(]*)\((.*)\)$/)
+      if (!parts) {
+        throw new Error("universe log line <<<"+line+">>> is invalid")
+      }
       var functionIdentifier = parts[1]
       var args = JSON.parse("["+parts[2]+"]")
       return buildEntry(functionIdentifier, args)
