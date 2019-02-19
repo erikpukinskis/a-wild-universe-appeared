@@ -128,7 +128,7 @@ Modules can provide a hook that takes a list of its own log entries, and compact
 ```javascript
 person("Erik", "Carpenter")
 person.changeName("Erik", "Bob")
-person.changeProfession("Bob", "Potter)
+person.changeProfession("Bob", "Potter")
 ```
 
 would get compacted to
@@ -145,7 +145,7 @@ delivery("Erik", "bonsai bench")
 person.changeProfession("Erik", "woodsman")
 delivery("Erik", "cedar")
 person.changeName("Erik", "Bob")
-person.changeProfession("Bob", "potter)
+person.changeProfession("Bob", "potter")
 delivery("Bob", "bonsai pot")
 ```
 
@@ -157,7 +157,7 @@ delivery("Originally Erik", "bonsai bench")
 person.changeProfession("Originally Erik", "woodsman")
 delivery("Originally Erik", "cedar")
 person.changeName("Originally Erik", "Bob")
-person.changeProfession("Originally Erik", "potter)
+person.changeProfession("Originally Erik", "potter")
 delivery("Originally Erik", "bonsai pot")
 ```
 This seems better:
