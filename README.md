@@ -118,3 +118,58 @@ That makes it super easy to construct test cases that you can use while you are 
 That makes it much less likely that you'll need a production database on your development machine.
 
 It also makes it much easier to test submodules independently of your app. You can just do something in your main app, copy out a resulting micro universe, and use it in a demo of the submodule.
+
+### Plan for compaction
+
+Obviously the elephant in the room is these logs get big fast.
+
+Modules can provide a hook that takes a list of its own log entries, and compacts them into individual instances of the toplevel function, to the extent possible. So:
+
+```javascript
+person("Erik", "Carpenter")
+person.changeName("Erik", "Bob")
+person.changeProfession("Bob", "Potter)
+```
+
+would get compacted to
+
+```javascript
+person("Bob", "Potter")
+```
+
+It gets weird when there are other objects dependent on us:
+
+```javascript
+person("Erik", "carpenter")
+delivery("Erik", "bonsai bench")
+person.changeProfession("Erik", "woodsman")
+delivery("Erik", "cedar")
+person.changeName("Erik", "Bob")
+person.changeProfession("Bob", "potter)
+delivery("Bob", "bonsai pot")
+```
+
+I guess we have to go somewhere like this:
+
+```javascript
+person("Originally Erik", "carpenter")
+delivery("Originally Erik", "bonsai bench")
+person.changeProfession("Originally Erik", "woodsman")
+delivery("Originally Erik", "cedar")
+person.changeName("Originally Erik", "Bob")
+person.changeProfession("Originally Erik", "potter)
+delivery("Originally Erik", "bonsai pot")
+```
+This seems better:
+
+```javascript
+person("Bob", "potter")
+delivery("Bob", "bonsai bench")
+delivery("Bob", "cedar")
+delivery("Bob", "bonsai pot")
+```
+Not sure how to get there. I guess we just 
+
+```
+registerArgumentMapping({personId: "Erik"},  /^Erik$/, "Bob", position-1412)
+```
