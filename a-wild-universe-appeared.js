@@ -676,11 +676,11 @@ module.exports = library.export(
       function(functionIdentifier) {
         var args = Array.prototype.slice.call(arguments, 1)
 
-        for(var i=0; i<args.length; i++) {
-          if (typeof args[i] == "undefined") {
-            throw new Error(i+"th arg to universe.do "+functionIdentifier+" was undefined.")
-          }
-        }
+        // for(var i=0; i<args.length; i++) {
+        //   if (typeof args[i] == "undefined") {
+        //     throw new Error(i+"th arg to universe.do "+functionIdentifier+" was undefined.")
+        //   }
+        // }
         
         var entry = buildEntry(
           functionIdentifier,
@@ -690,13 +690,13 @@ module.exports = library.export(
 
         this.logEntries.push(entry)
 
-        this.notifyStatementWaiters()
+        this.notifyStatementWaiters(functionIdentifier, args)
 
         this.persist()
       }
 
-    ModuleUniverse.prototype.notifyStatementWaiters = function() {
-      for(var i=0; i<this.awaitingForStatement.length; i++) {
+    ModuleUniverse.prototype.notifyStatementWaiters = function(functionIdentifier, args) {
+      for(var i=0; i<this.waitingForStatement.length; i++) {
         this.waitingForStatement[i](functionIdentifier, args)
       }}
 
