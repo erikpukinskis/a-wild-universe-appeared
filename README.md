@@ -4,10 +4,14 @@
 var aWildUniverseAppeared = require("a-wild-universe-appeared")
 ```
 
-Create a universe called "meals" that uses the npm module called "my-pantry":
+Create a universe called "meals" that does work with a `myPantry` singleton:
 
 ```javascript
-universe = aWildUniverseAppeared("meals", {"myPantry": "my-pantry"})
+function myPantry() { ... }
+myPantry.incredient = function ...
+...
+
+universe = aWildUniverseAppeared("meals", {"myPantry": myPantry})
 ```
 
 ### Sync it with S3:
@@ -30,12 +34,36 @@ universe.do("myPantry", "eriks-pantry")
 universe.do("myPantry.ingredient", "eriks-pantry", "paprika", "have")
 universe.do("myPantry.ingredient", "eriks-pantry", "cocoa", "need")
 ```
+
+This will persist a log that looks something like this:
+
+```javascript
+function(myPantry) {
+  myPantry("eriks-pantry")
+  myPantry.ingredient("eriks-pantry", "paprika", "have")
+  myPantry.ingredient("eriks-pantry", "cocoa", "need")
+}
+```
+
+At this point, none of these functions have actually been called.
+
 ### Replay the log:
+
+Typically your app would be making calls directly to the singleton while it is also logging calls to the universe. However, when booting a server or traversing undo histories you will want to have the universe play back the events into the singleton:
 
 ```javascript
 universe.playItBack()
 var haves = myPantry.listHaves("eriks-pantry")
 // Returns ["paprika")
+```
+
+Sometimes you may also just be loading a single event or a small number of events from another machine, a user, etc. You can play back a single item as well:
+
+```javascript
+var clientCommand = "myPantry"
+var clientArg = "user-12-pantry"
+universe.do(clientCommand, clientArg)
+universe.playLast(1)
 ```
 
 ### Quiet the incessant logging:
