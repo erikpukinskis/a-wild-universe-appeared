@@ -5,7 +5,8 @@
   "main": "a-wild-universe-appeared.js",
   "dependencies": {
     "module-library": "*",
-    "knox": "*"
+    "knox": "*",
+    "identifiable": "*"
   },
   "devDependencies": {
     "run-test": "*",
