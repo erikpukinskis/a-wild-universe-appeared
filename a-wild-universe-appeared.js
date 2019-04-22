@@ -3,13 +3,21 @@ var library = require("module-library")(require)
 
 module.exports = library.export(
   "a-wild-universe-appeared",[
-  library.ref()],
-  function(lib) {
+  library.ref(),
+  "identifiable"],
+  function(lib, identifiable) {
 
     var cached = {}
     var signatures = {}
+    var takenIds = {}
 
     function aWildUniverseAppeared(name, pathsByName, baseLog) {
+
+      var prefix = "uni"+(name || "")
+
+      this.id = identifiable.assignId(takenIds, null, prefix)
+      takenIds[this.id] = true
+
       var universe = new ModuleUniverse(name)
 
       var signature = pathsToSignature(pathsByName)
@@ -74,6 +82,7 @@ module.exports = library.export(
       this.persistenceEngine = "offline"
       this.singletons = null
       this.baseLogEntries = null
+      this.sockets = null
     }
 
     function baseLogHasEntries(baseLog) {
@@ -574,12 +583,98 @@ module.exports = library.export(
         return JSON.stringify(arg)
       }
     }
+
+    ModuleUniverse.prototype.defineOn = function(bridge, aWildInBrowser) {
+      return bridge.defineSingleton(
+        "uni"+(this.id||"v"),[
+        aWildInBrowser,
+        this.name,
+        this.pathsByName,
+        this.builder()],
+        function(aWildUniverseAppeared, name, pathsByName, builder) {
+          var universe = aWildUniverseAppeared(
+            name,
+            pathsByName,
+            builder)
+
+          return universe
+        })
+    }
+
+    ModuleUniverse.prototype.syncToSocket = function(socket, callback) {
+      if (!callback) {
+        throw new Error("universe.syncToSocket needs a callback: function(socketId, universe, data) that gets called when the socket returns a new log entry")
+      }
+      console.log("calling syncToSocket")
+      debugger
+
+      // so here is where we ostensibly tell the universe that whatever comes out of that socket needs to get added to itself, and broadcast to any other clients.
+
+      // Then this client wants to get any updates onStatement of the universe
+
+      if (!this.sockets) {
+        var sockets = this.sockets = []
+        this.onStatement(
+          sendNewStatementToSockets.bind(
+            null,
+            this))
+      }
+
+      if (socket.onClose) {
+        socket.onClose(removeItem.bind(null, socket, this.sockets))
+      }
+
+      this.sockets.push(socket)
+
+      console.log("Just added sendNewStatementToSockets as an onStatement handler.\n")
+      debugger
+
+      console.log("Here is where we are telling the socket what to do when it listens:")
+      socket.listen(callback.bind(null, socket.id, this))
+    }
+
+    function removeItem(item, items) {
+      var i = items.indexOf(item)
+      console.log("forgetting socket", item.id)
+      if (i < 0) {
+        return }
+      items.splice(i, 1)
+    }
+
+    function sendNewStatementToSockets(universe, functionIdentifier, args) {
+      console.log("should be some sockets to send to?", universe.sockets && universe.sockets.length)
+      debugger
+
+      if (!universe.sockets) {
+        return }
+
+      universe.sockets.forEach(function(socket) {
+
+        var message = JSON.stringify({
+          functionIdentifier: functionIdentifier,
+          args: args})
+
+        socket.send(message)
+      })
+    }
+
+
+    // ModuleUniverse.prototype.backfill = function(functionIdentifier, args) {
+
+    //   var entry = buildEntry(
+    //     functionIdentifier,
+    //     args)
+
+    //   test(entry)
+
+    //   this.logEntries.push(entry)
+
+    //   notifyStatementWaiters()
+    // }
+
     ModuleUniverse.prototype.do =
       function(functionIdentifier) {
         var args = Array.prototype.slice.call(arguments, 1)
-
-        if (!call) {
-          throw new Error("no call")}
 
         for(var i=0; i<args.length; i++) {
           if (typeof args[i] == "undefined") {
@@ -595,12 +690,15 @@ module.exports = library.export(
 
         this.logEntries.push(entry)
 
-        for(var i=0; i<this.waitingForStatement.length; i++) {
-          this.waitingForStatement[i](functionIdentifier, args)
-        }
+        this.notifyStatementWaiters()
 
         this.persist()
       }
+
+    ModuleUniverse.prototype.notifyStatementWaiters = function() {
+      for(var i=0; i<this.awaitingForStatement.length; i++) {
+        this.waitingForStatement[i](functionIdentifier, args)
+      }}
 
     function noop() {}
 
