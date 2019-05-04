@@ -13,12 +13,10 @@ module.exports = library.export(
 
     function aWildUniverseAppeared(name, pathsByName, baseLog) {
 
-      var prefix = "uni"+(name || "")
-
-      this.id = identifiable.assignId(takenIds, null, prefix)
-      takenIds[this.id] = true
-
-      var universe = new FuntionCallLog(name)
+      if (typeof pathsByName != "object") {
+        throw new Error("missing call log paths. Try new FunctionCall(\"some name\", {pathTo: singleton, etc...})")
+      }
+      debugger
 
       var signature = pathsToSignature(pathsByName)
 
@@ -30,22 +28,15 @@ module.exports = library.export(
         return cached[name]
       }
 
-      var paths = []
-      var names = []
+      if (this instanceof aWildUniverseAppeared) {
 
-      for(var name in pathsByName) {
-        var modulePath = pathsByName[name]
-        universe.moduleIndexByName[name] = paths.length
-        paths.push(modulePath)
-        names.push(name)
+        Object.setPrototypeOf(this, FuntionCallLog)
+
+        var universe = FuntionCallLog.call(this, name, pathsByName, baseLog)
+
+      } else {
+        var universe = new FuntionCallLog(name, pathsByName, baseLog)
       }
-
-      universe.baseLog = baseLog || newBaseLog(names)
-
-      universe.pathsByName = pathsByName
-      universe.modulePaths = paths
-      universe.names = names
-      universe.signature = signature
 
       cached[name] = universe
       signatures[name] = signature
@@ -62,14 +53,25 @@ module.exports = library.export(
       return str.join("&");
     }
 
-    function FuntionCallLog(name, baseLog) {
+    function FuntionCallLog(name, pathsByName, baseLog) {
 
       this.name = name
       this.library = null
-      this.modulePaths = null
-      this.pathsByName = null
+      this.pathsByName = pathsByName || null
       this.moduleIndexByName = {}
-      this.baseLog = baseLog || null
+
+      this.names = []
+      this.modulePaths = []
+
+      for(var name in pathsByName) {
+        var modulePath = pathsByName[name]
+        this.moduleIndexByName[name] = this.modulePaths.length
+        this.modulePaths.push(modulePath)
+        this.names.push(name)
+      }
+
+      this.baseLog =  baseLog || newBaseLog(this.names)
+
       this.logEntries = []
       this.marks = {}
       this.didSyncToMark = null
@@ -83,6 +85,12 @@ module.exports = library.export(
       this.singletons = null
       this.baseLogEntries = null
       this.sockets = null
+
+      var prefix = "uni"+(name || "")
+
+      this.id = identifiable.assignId(takenIds, null, prefix)
+
+      takenIds[this.id] = true
     }
 
     function baseLogHasEntries(baseLog) {

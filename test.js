@@ -1,5 +1,20 @@
 var runTest = require("run-test")(require)
 
+
+runTest(
+  "constructor-style invocation",
+  ["."],
+  function(expect, done, FunctionCallLog) {
+
+    debugger
+    var universe = new FunctionCallLog("hi", {})
+    debugger
+    expect(universe.do).not.to.be.undefined
+    done()
+  })
+
+
+
 runTest(
   "mirrorTo",
   ["."],
