@@ -28,15 +28,7 @@ module.exports = library.export(
         return cached[name]
       }
 
-      if (this instanceof aWildUniverseAppeared) {
-
-        Object.setPrototypeOf(this, FunctionCallLog)
-
-        var universe = FunctionCallLog.call(this, name, pathsByName, baseLog)
-
-      } else {
-        var universe = new FunctionCallLog(name, pathsByName, baseLog)
-      }
+      var universe = new FunctionCallLog(name, pathsByName, baseLog)
 
       cached[name] = universe
       signatures[name] = signature
@@ -55,7 +47,9 @@ module.exports = library.export(
 
     function FunctionCallLog(name, pathsByName, baseLog) {
 
-      if (this.constructor != FunctionCallLog) {
+      var inConstructor = this instanceof FunctionCallLog
+
+      if (!inConstructor) {
         return buildNewLog(name, pathsByName, baseLog)
       }
 
@@ -619,7 +613,7 @@ module.exports = library.export(
         })
     }
 
-    ModuleUniverse.prototype.syncToSocket = function(socket, callback) {
+    FunctionCallLog.prototype.syncToSocket = function(socket, callback) {
       if (!callback) {
         throw new Error("universe.syncToSocket needs a callback: function(socketId, universe, data) that gets called when the socket returns a new log entry")
       }
@@ -655,7 +649,7 @@ module.exports = library.export(
       items.splice(i, 1)
     }
 
-    ModuleUniverse.prototype.broadcast = function(functionIdentifier, args) {
+    FunctionCallLog.prototype.broadcast = function(functionIdentifier, args) {
       console.log("should be some sockets to send to?", this.sockets && this.sockets.length)
 
       if (!this.sockets) {
@@ -708,7 +702,7 @@ module.exports = library.export(
           functionIdentifier,
           args)
 
-        if (args[0].DTRACE_NET_SERVER_CONNECTION) {
+        if (args[0] && args[0].DTRACE_NET_SERVER_CONNECTION) {
           debugger
         }
         test(entry)
