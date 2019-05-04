@@ -11,8 +11,6 @@ module.exports = library.export(
     var signatures = {}
     var takenIds = {}
 
-
-
     function buildNewLog(name, pathsByName, baseLog) {
 
       if (typeof pathsByName != "object") {
@@ -833,6 +831,6 @@ module.exports = library.export(
       }
     }
 
-    return aWildUniverseAppeared
+    return FunctionCallLog
   }
 )
