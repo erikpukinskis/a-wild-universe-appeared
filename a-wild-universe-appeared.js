@@ -11,7 +11,9 @@ module.exports = library.export(
     var signatures = {}
     var takenIds = {}
 
-    function aWildUniverseAppeared(name, pathsByName, baseLog) {
+
+
+    function buildNewLog(name, pathsByName, baseLog) {
 
       if (typeof pathsByName != "object") {
         throw new Error("missing call log paths. Try new FunctionCall(\"some name\", {pathTo: singleton, etc...})")
@@ -30,12 +32,12 @@ module.exports = library.export(
 
       if (this instanceof aWildUniverseAppeared) {
 
-        Object.setPrototypeOf(this, FuntionCallLog)
+        Object.setPrototypeOf(this, FunctionCallLog)
 
-        var universe = FuntionCallLog.call(this, name, pathsByName, baseLog)
+        var universe = FunctionCallLog.call(this, name, pathsByName, baseLog)
 
       } else {
-        var universe = new FuntionCallLog(name, pathsByName, baseLog)
+        var universe = new FunctionCallLog(name, pathsByName, baseLog)
       }
 
       cached[name] = universe
@@ -53,7 +55,11 @@ module.exports = library.export(
       return str.join("&");
     }
 
-    function FuntionCallLog(name, pathsByName, baseLog) {
+    function FunctionCallLog(name, pathsByName, baseLog) {
+
+      if (this.constructor != FunctionCallLog) {
+        return buildNewLog(name, pathsByName, baseLog)
+      }
 
       this.name = name
       this.library = null
@@ -90,6 +96,8 @@ module.exports = library.export(
 
       this.id = identifiable.assignId(takenIds, null, prefix)
 
+      this.apply = this.apply.bind(this)
+
       takenIds[this.id] = true
     }
 
@@ -101,12 +109,12 @@ module.exports = library.export(
       return !!baseLog.match(/  [a-zA-Z]/)
     }
 
-    FuntionCallLog.prototype.getLastSyncMark = function() {
+    FunctionCallLog.prototype.getLastSyncMark = function() {
       return this.didSyncToMark
     }
 
     var lastMarkInteger = 1000*2000
-    FuntionCallLog.prototype.mark = function(isGlobal) {
+    FunctionCallLog.prototype.mark = function(isGlobal) {
       lastMarkInteger++
       var prefix = isGlobal ? "glo-" : "loc-"
       var mark = prefix+lastMarkInteger.toString(36)
@@ -114,7 +122,7 @@ module.exports = library.export(
       return mark
     }
 
-    FuntionCallLog.prototype.markSynced = function(localMark, globalMark) {
+    FunctionCallLog.prototype.markSynced = function(localMark, globalMark) {
       if (!globalMark) {
         throw new Error("server didn't mark sync point")
       }
@@ -122,7 +130,7 @@ module.exports = library.export(
       this.didSyncToMark = globalMark
     }
 
-    FuntionCallLog.prototype.getStatements = function(fromMark, toMark) {
+    FunctionCallLog.prototype.getStatements = function(fromMark, toMark) {
       if (fromMark) {
         var fromIndex = this.marks[fromMark]
       } else {
@@ -138,7 +146,7 @@ module.exports = library.export(
       return this.logEntries.slice(fromIndex, toIndex)
     }
 
-    FuntionCallLog.prototype.rewriteArguments = function(callPattern, argumentPosition, replacements) {
+    FunctionCallLog.prototype.rewriteArguments = function(callPattern, argumentPosition, replacements) {
 
       var baseLength = callPattern.length - 2
       var anyMethod = callPattern.slice(baseLength, callPattern.length) == ".*"
@@ -171,7 +179,7 @@ module.exports = library.export(
       )
     }
 
-    FuntionCallLog.prototype.mute = function mute(value) {
+    FunctionCallLog.prototype.mute = function mute(value) {
       if (value === false) {
         this.quiet = false
       } else {
@@ -181,10 +189,10 @@ module.exports = library.export(
 
     var parents = 0
 
-    FuntionCallLog.prototype.fork = function(newName) {
+    FunctionCallLog.prototype.fork = function(newName) {
       parents++
       var parentName = "parent-"+parents
-      var parent = new FuntionCallLog(parentName)
+      var parent = new FunctionCallLog(parentName)
       parent.logEntries = this.logEntries
       parent.baseLog = this.baseLog
       parent.names = this.names
@@ -193,7 +201,7 @@ module.exports = library.export(
       parent.singletons = this.singletons
       parent.moduleIndexByName = this.moduleIndexByName
 
-      var fork = new FuntionCallLog(newName)
+      var fork = new FunctionCallLog(newName)
       fork.baseLog = newBaseLog(this.names)
       fork.names = this.names
       fork.modulePaths = this.modulePaths
@@ -210,7 +218,7 @@ module.exports = library.export(
       return fork
     }
 
-    FuntionCallLog.prototype.useLibrary = function(lib) {
+    FunctionCallLog.prototype.useLibrary = function(lib) {
       this.library = lib
     }
 
@@ -218,11 +226,11 @@ module.exports = library.export(
       return eval("(function("+names.join(", ")+") {\n  // begin\n})")
     }
 
-    FuntionCallLog.prototype.isReady = function() {
+    FunctionCallLog.prototype.isReady = function() {
       return !this.isWaiting
     }
 
-    FuntionCallLog.prototype.load = function(callback) {
+    FunctionCallLog.prototype.load = function(callback) {
 
       switch(this.persistenceEngine) {
       case "offline":
@@ -243,7 +251,7 @@ module.exports = library.export(
 
     // LocalStorage
 
-    FuntionCallLog.prototype.persistToLocalStorage = function() {
+    FunctionCallLog.prototype.persistToLocalStorage = function() {
       this.persistenceEngine = "localStorage"
       this.storage = window.localStorage
       if (!this.storage) {
@@ -251,7 +259,7 @@ module.exports = library.export(
       }
     }
 
-    FuntionCallLog.prototype.loadFromLocalStorage = function(callback) {
+    FunctionCallLog.prototype.loadFromLocalStorage = function(callback) {
       var loaded = this.storage.getItem(this.path())
       if (loaded) {
         handleNewLog(this, loaded)
@@ -260,14 +268,14 @@ module.exports = library.export(
       }
     }
 
-    FuntionCallLog.prototype.writeToLocalStorage = function() {
+    FunctionCallLog.prototype.writeToLocalStorage = function() {
       this.storage.setItem(this.path(), this.source())
     }
 
 
     // S3
 
-    FuntionCallLog.prototype.persistToS3 = function(options) {
+    FunctionCallLog.prototype.persistToS3 = function(options) {
       if (!options) {
         options = {
           key: process.env.AWS_ACCESS_KEY_ID,
@@ -280,7 +288,7 @@ module.exports = library.export(
       this.s3 = require("knox").createClient(options)
     }
 
-    FuntionCallLog.prototype.writeToS3 = function() {
+    FunctionCallLog.prototype.writeToS3 = function() {
       var log = new Buffer(this.source())
 
       this.s3.putBuffer(
@@ -301,7 +309,7 @@ module.exports = library.export(
       finishPersisting.call(this)
     }
 
-    FuntionCallLog.prototype.loadFromS3 = function(callback) {
+    FunctionCallLog.prototype.loadFromS3 = function(callback) {
 
       if (!this.s3) {
         console.log("WARNING: No AWS credentials, no persistence. We are dust in the wind.")
@@ -350,7 +358,7 @@ module.exports = library.export(
       universe.isWaiting = false
     }
 
-    FuntionCallLog.prototype.onReady =
+    FunctionCallLog.prototype.onReady =
       function(callback) {
         if (!this.isWaiting) {
           callback()
@@ -359,7 +367,7 @@ module.exports = library.export(
         }
       }
 
-    FuntionCallLog.prototype.loadSingletonsFromCommonJS = function() {
+    FunctionCallLog.prototype.loadSingletonsFromCommonJS = function() {
       var singletons = this.singletons = []
       var paths = this.modulePaths
 
@@ -379,7 +387,7 @@ module.exports = library.export(
       })      
     }
 
-    FuntionCallLog.prototype.playItBack = function(options) {
+    FunctionCallLog.prototype.playItBack = function(options) {
 
       if (this.wasPlayed && options && options.skipIfPlayed) {
         return
@@ -409,11 +417,11 @@ module.exports = library.export(
     }
 
 
-    FuntionCallLog.prototype.builder = function() {
+    FunctionCallLog.prototype.builder = function() {
       return eval("("+this.source()+")")
     }
 
-    FuntionCallLog.prototype.callFunctionsFrom = function(index, maxIndex, callback) {
+    FunctionCallLog.prototype.callFunctionsFrom = function(index, maxIndex, callback) {
 
       if (!this.baseLogEntries) {
         var entry = this.logEntries[index]
@@ -432,7 +440,7 @@ module.exports = library.export(
       callEntry(this, entry)
 
       if (callback) {
-        var callNext = FuntionCallLog.prototype.callFunctionsFrom.bind(
+        var callNext = FunctionCallLog.prototype.callFunctionsFrom.bind(
           this,
           index+1,
           maxIndex,
@@ -474,7 +482,7 @@ module.exports = library.export(
       }
     }
 
-    FuntionCallLog.prototype.buildLinesFromBaseLog = function() {
+    FunctionCallLog.prototype.buildLinesFromBaseLog = function() {
 
       if (typeof this.baseLog == "function") {
         var baseLog = this.baseLog.toString()
@@ -510,7 +518,7 @@ module.exports = library.export(
       }
     }
 
-    FuntionCallLog.prototype.getSingleton = function(name) {
+    FunctionCallLog.prototype.getSingleton = function(name) {
       var path = this.pathsByName[name]
       if (typeof path == "function") {
         return path
@@ -525,20 +533,20 @@ module.exports = library.export(
       return singleton
     }
 
-    FuntionCallLog.prototype.info = function() {
+    FunctionCallLog.prototype.info = function() {
       if (this.quiet) { return }
       console.log.apply(console, arguments)
     }
 
-    FuntionCallLog.prototype.markAsUnplayed = function() {
+    FunctionCallLog.prototype.markAsUnplayed = function() {
       this.wasPlayed = false      
     }
 
-    FuntionCallLog.prototype.onStatement = function(callback) {
+    FunctionCallLog.prototype.onStatement = function(callback) {
       this.waitingForStatement.push(callback)
     }
 
-    FuntionCallLog.prototype.mirrorTo = function(singletons) {
+    FunctionCallLog.prototype.mirrorTo = function(singletons) {
       if (this.singletons) {
         throw new Error("Already provided singletons to this universe")
       }
@@ -596,7 +604,7 @@ module.exports = library.export(
       }
     }
 
-    FuntionCallLog.prototype.defineOn = function(bridge, aWildInBrowser) {
+    FunctionCallLog.prototype.defineOn = function(bridge, aWildInBrowser) {
       return bridge.defineSingleton(
         "uni"+(this.id||"v"),[
         aWildInBrowser,
@@ -666,7 +674,7 @@ module.exports = library.export(
     }
 
 
-    // FuntionCallLog.prototype.backfill = function(functionIdentifier, args) {
+    // FunctionCallLog.prototype.backfill = function(functionIdentifier, args) {
 
     //   var entry = buildEntry(
     //     functionIdentifier,
@@ -679,7 +687,7 @@ module.exports = library.export(
     //   notifyStatementWaiters()
     // }
 
-    ModuleUniverse.prototype.apply =
+    FunctionCallLog.prototype.apply =
       function(functionIdentifier, args) {
       this.do.apply(
         this,[
@@ -714,7 +722,7 @@ module.exports = library.export(
         this.persist()
       }
 
-    FuntionCallLog.prototype.notifyStatementWaiters = function(functionIdentifier, args) {
+    FunctionCallLog.prototype.notifyStatementWaiters = function(functionIdentifier, args) {
       for(var i=0; i<this.waitingForStatement.length; i++) {
         this.waitingForStatement[i](functionIdentifier, args)
       }}
@@ -747,7 +755,7 @@ module.exports = library.export(
       }
     }
 
-    FuntionCallLog.prototype.source = function() {
+    FunctionCallLog.prototype.source = function() {
       if (typeof this.baseLog == "string") {
         var base = this.baseLog
       } else {
@@ -767,12 +775,12 @@ module.exports = library.export(
       return generator
     }
 
-    FuntionCallLog.prototype.path =
+    FunctionCallLog.prototype.path =
       function() {
         return "/universes/"+this.name+"/all.js"
       }
 
-    FuntionCallLog.prototype.persist = function() {
+    FunctionCallLog.prototype.persist = function() {
 
       if (this.isSaving) {
         this.isDirty = true
@@ -795,7 +803,7 @@ module.exports = library.export(
       }
     }
 
-    FuntionCallLog.prototype.persistNow = function() {
+    FunctionCallLog.prototype.persistNow = function() {
 
       this.isDirty = false
       this.lastSave = new Date()
