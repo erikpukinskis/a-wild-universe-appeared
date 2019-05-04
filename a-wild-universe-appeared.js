@@ -459,6 +459,9 @@ module.exports = library.export(
     }
 
     function buildEntry(functionIdentifier, args) {
+      if (typeof functionIdentifier != "string") {
+        throw new Error("universe statements need to have a function identifier string first. You passed "+ functionIdentifier)
+      }
       var functionParts = functionIdentifier.split(".")
       var singletonName = functionParts[0]
       var methodName = functionParts[1]
@@ -575,6 +578,7 @@ module.exports = library.export(
           }
           paramString += value
         } catch(e) {
+          debugger
           throw new Error(i+"th argument to universe statement "+entry.functionIdentifier+" couldn't be turned into JSON: ", value)}}
 
       var line = entry.functionIdentifier+"("+paramString+")"
@@ -609,12 +613,11 @@ module.exports = library.export(
         })
     }
 
-    FuntionCallLog.prototype.syncToSocket = function(socket, callback) {
+    ModuleUniverse.prototype.syncToSocket = function(socket, callback) {
       if (!callback) {
         throw new Error("universe.syncToSocket needs a callback: function(socketId, universe, data) that gets called when the socket returns a new log entry")
       }
       console.log("calling syncToSocket")
-      debugger
 
       // so here is where we ostensibly tell the universe that whatever comes out of that socket needs to get added to itself, and broadcast to any other clients.
 
@@ -622,10 +625,6 @@ module.exports = library.export(
 
       if (!this.sockets) {
         var sockets = this.sockets = []
-        this.onStatement(
-          sendNewStatementToSockets.bind(
-            null,
-            this))
       }
 
       if (socket.onClose) {
@@ -634,11 +633,12 @@ module.exports = library.export(
 
       this.sockets.push(socket)
 
-      console.log("Just added sendNewStatementToSockets as an onStatement handler.\n")
-      debugger
+      console.log("Not doing anything onStatement? Maybe that's ok.\n")
 
       console.log("Here is where we are telling the socket what to do when it listens:")
-      socket.listen(callback.bind(null, socket.id, this))
+      socket.listen(function(data) {
+        debugger
+        callback(socket.id, this, data.functionIdentifier, data.args)})
     }
 
     function removeItem(item, items) {
@@ -649,14 +649,13 @@ module.exports = library.export(
       items.splice(i, 1)
     }
 
-    function sendNewStatementToSockets(universe, functionIdentifier, args) {
-      console.log("should be some sockets to send to?", universe.sockets && universe.sockets.length)
-      debugger
+    ModuleUniverse.prototype.broadcast = function(functionIdentifier, args) {
+      console.log("should be some sockets to send to?", this.sockets && this.sockets.length)
 
-      if (!universe.sockets) {
+      if (!this.sockets) {
         return }
 
-      universe.sockets.forEach(function(socket) {
+      this.sockets.forEach(function(socket) {
 
         var message = JSON.stringify({
           functionIdentifier: functionIdentifier,
@@ -680,7 +679,16 @@ module.exports = library.export(
     //   notifyStatementWaiters()
     // }
 
-    FuntionCallLog.prototype.do =
+    ModuleUniverse.prototype.apply =
+      function(functionIdentifier, args) {
+      this.do.apply(
+        this,[
+        functionIdentifier]
+        .concat(
+          args))
+    }
+
+    FunctionCallLog.prototype.do =
       function(functionIdentifier) {
         var args = Array.prototype.slice.call(arguments, 1)
 
@@ -694,6 +702,9 @@ module.exports = library.export(
           functionIdentifier,
           args)
 
+        if (args[0].DTRACE_NET_SERVER_CONNECTION) {
+          debugger
+        }
         test(entry)
 
         this.logEntries.push(entry)
