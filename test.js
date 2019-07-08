@@ -5,10 +5,7 @@ runTest(
   "constructor-style invocation",
   ["."],
   function(expect, done, FunctionCallLog) {
-
-    debugger
     var universe = new FunctionCallLog("hi", {})
-    debugger
     expect(universe.do).not.to.be.undefined
     done()
   })
@@ -85,6 +82,26 @@ runTest(
     done()
   }
 )
+
+runTest(
+  "persist to file",
+  ["./", "fs"],
+  function(expect, done, aWildUniverseAppeared, fs) {
+    var universe = aWildUniverseAppeared("test", {hi: null})
+    universe.persistToDisk()
+    universe.do("hi", "hobo")
+
+    fs.readFile(
+      "universe.log.js",
+      "utf-8",
+      function(error, data) {
+        expect(data).to.match(/hobo/)
+        fs.unlink(
+          "universe.log.js",
+          done)})
+  })
+
+
 
 runTest(
   "can play events back",

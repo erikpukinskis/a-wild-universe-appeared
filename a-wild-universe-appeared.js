@@ -16,7 +16,6 @@ module.exports = library.export(
       if (typeof pathsByName != "object") {
         throw new Error("missing call log paths. Try new FunctionCall(\"some name\", {pathTo: singleton, etc...})")
       }
-      debugger
 
       var signature = pathsToSignature(pathsByName)
 
@@ -234,11 +233,42 @@ module.exports = library.export(
       case "localStorage":
         this.loadFromLocalStorage(callback)
         break;
+      case "node":
+        this.loadFromDisk(callback)
+        break;
       default:
         throw new Error("How to load?")
       }
 
     }
+
+
+    // Write to disk
+
+    FunctionCallLog.prototype.persistToDisk = function() {
+      if (!require) {
+        throw new Error("Cannot persist to disk in the browser. Try universe.persistToLocalStorage")}
+      this.persistenceEngine = "node"
+      this.storage = require("fs")}
+
+    FunctionCallLog.prototype.loadFromDisk = function(callback) {
+      var log = this
+      this.storage.readFile(
+        "universe.log.js",
+        "utf8",
+        function(error, baseLog) {
+          if (error) {
+            console.log("Nothing found in universe.log.js!")}
+          handleNewLog(log, baseLog)
+        })}
+
+    FunctionCallLog.prototype.writeToDisk = function() {
+      this.storage.writeFile(
+        "universe.log.js",
+        this.source(),
+        finishPersisting.bind(
+          this))}
+
 
 
     // LocalStorage
@@ -262,7 +292,9 @@ module.exports = library.export(
 
     FunctionCallLog.prototype.writeToLocalStorage = function() {
       this.storage.setItem(this.path(), this.source())
+      finishPersisting.call(this)
     }
+
 
 
     // S3
@@ -319,6 +351,8 @@ module.exports = library.export(
       .on("response", connect)
       .end()
     }
+
+
 
     function call(fn) { fn() }
 
@@ -578,7 +612,6 @@ module.exports = library.export(
           }
           paramString += value
         } catch(e) {
-          debugger
           throw new Error(i+"th argument to universe statement "+entry.functionIdentifier+" couldn't be turned into JSON: ", value)}}
 
       var line = entry.functionIdentifier+"("+paramString+")"
@@ -637,7 +670,6 @@ module.exports = library.export(
 
       console.log("Here is where we are telling the socket what to do when it listens:")
       socket.listen(function(data) {
-        debugger
         callback(socket.id, this, data.functionIdentifier, data.args)})
     }
 
@@ -703,7 +735,7 @@ module.exports = library.export(
           args)
 
         if (args[0] && args[0].DTRACE_NET_SERVER_CONNECTION) {
-          debugger
+          throw new Error("very bad")
         }
         test(entry)
 
@@ -811,6 +843,9 @@ module.exports = library.export(
         break;
       case "localStorage":
         this.writeToLocalStorage()
+        break;
+      case "node":
+        this.writeToDisk(finishPersisting.bind)
         finishPersisting.call(this)
         break;
       default:
