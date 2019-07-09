@@ -1,6 +1,6 @@
 {
   "name": "a-wild-universe-appeared",
-  "version": "0.45.0",
+  "version": "0.46.0",
   "description": "Build up a log of function calls for replaying later",
   "main": "a-wild-universe-appeared.js",
   "dependencies": {
