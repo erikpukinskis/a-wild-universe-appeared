@@ -546,7 +546,7 @@ module.exports = library.export(
 
     FunctionCallLog.prototype.getSingleton = function(name) {
       var path = this.pathsByName[name]
-      if (typeof path == "function") {
+      if (typeof path != "string") {
         return path
       }
       var moduleIndex = this.moduleIndexByName[name]
